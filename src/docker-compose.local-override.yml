@@ -1,0 +1,154 @@
+x-geo-volumes: &geo-volumes
+  - D:\GEOFlow\overrides\ai-workspace-index.blade.php:/var/www/html/resources/views/admin/ai-workspace/index.blade.php:ro
+  - D:\GEOFlow\overrides\web.php:/var/www/html/routes/web.php:ro
+  - D:\GEOFlow\overrides\GeoAuditor.php:/var/www/html/app/Support/GeoAudit/GeoAuditor.php:ro
+  - D:\GEOFlow\overrides\GeoAuditReport.php:/var/www/html/app/Support/GeoAudit/GeoAuditReport.php:ro
+  - D:\GEOFlow\overrides\GeoAuditAdvisor.php:/var/www/html/app/Support/GeoAudit/GeoAuditAdvisor.php:ro
+  - D:\GEOFlow\overrides\GeoAuditSchema.php:/var/www/html/app/Support/GeoAudit/GeoAuditSchema.php:ro
+  - D:\GEOFlow\overrides\GeoPlanGenerator.php:/var/www/html/app/Support/GeoAudit/GeoPlanGenerator.php:ro
+  - D:\GEOFlow\overrides\GeoPlanReport.php:/var/www/html/app/Support/GeoAudit/GeoPlanReport.php:ro
+  - D:\GEOFlow\overrides\GeoStore.php:/var/www/html/app/Support/GeoAudit/GeoStore.php:ro
+  - D:\GEOFlow\overrides\GeoUi.php:/var/www/html/app/Support/GeoAudit/GeoUi.php:ro
+  - D:\GEOFlow\overrides\GeoTaskBridge.php:/var/www/html/app/Support/GeoAudit/GeoTaskBridge.php:ro
+  - D:\GEOFlow\overrides\GeoHistoryReport.php:/var/www/html/app/Support/GeoAudit/GeoHistoryReport.php:ro
+  - D:\GEOFlow\overrides\GeoKbBuilder.php:/var/www/html/app/Support/GeoAudit/GeoKbBuilder.php:ro
+  - D:\GEOFlow\overrides\GeoKbReport.php:/var/www/html/app/Support/GeoAudit/GeoKbReport.php:ro
+  - D:\GEOFlow\overrides\GeoKeywordMiner.php:/var/www/html/app/Support/GeoAudit/GeoKeywordMiner.php:ro
+  - D:\GEOFlow\overrides\GeoKeywordReport.php:/var/www/html/app/Support/GeoAudit/GeoKeywordReport.php:ro
+  - D:\GEOFlow\overrides\GeoChat.php:/var/www/html/app/Support/GeoAudit/GeoChat.php:ro
+  - D:\GEOFlow\overrides\GeoCoverageCheck.php:/var/www/html/app/Support/GeoAudit/GeoCoverageCheck.php:ro
+  - D:\GEOFlow\overrides\GeoCoverageReport.php:/var/www/html/app/Support/GeoAudit/GeoCoverageReport.php:ro
+  - D:\GEOFlow\overrides\GeoPlatforms.php:/var/www/html/app/Support/GeoAudit/GeoPlatforms.php:ro
+  - D:\GEOFlow\overrides\GeoContentStudio.php:/var/www/html/app/Support/GeoAudit/GeoContentStudio.php:ro
+  - D:\GEOFlow\overrides\GeoContentStudioReport.php:/var/www/html/app/Support/GeoAudit/GeoContentStudioReport.php:ro
+  - D:\GEOFlow\overrides\GeoPublish.php:/var/www/html/app/Support/GeoAudit/GeoPublish.php:ro
+  - D:\GEOFlow\overrides\GeoPublishReport.php:/var/www/html/app/Support/GeoAudit/GeoPublishReport.php:ro
+  - D:\GEOFlow\overrides\GeoScorer.php:/var/www/html/app/Support/GeoAudit/GeoScorer.php:ro
+  - D:\GEOFlow\overrides\GeoShareOfVoice.php:/var/www/html/app/Support/GeoAudit/GeoShareOfVoice.php:ro
+  - D:\GEOFlow\overrides\GeoShareOfVoiceReport.php:/var/www/html/app/Support/GeoAudit/GeoShareOfVoiceReport.php:ro
+  - D:\GEOFlow\overrides\GeoKeywordGen.php:/var/www/html/app/Support/GeoAudit/GeoKeywordGen.php:ro
+  - D:\GEOFlow\overrides\GeoKeywordGenReport.php:/var/www/html/app/Support/GeoAudit/GeoKeywordGenReport.php:ro
+  - D:\GEOFlow\overrides\GeoCitationRecord.php:/var/www/html/app/Support/GeoAudit/GeoCitationRecord.php:ro
+  - D:\GEOFlow\overrides\keyword-libraries-index.blade.php:/var/www/html/resources/views/admin/keyword-libraries/index.blade.php:ro
+  - D:\GEOFlow\overrides\articles-index.blade.php:/var/www/html/resources/views/admin/articles/index.blade.php:ro
+  - D:\GEOFlow\overrides\keyword-libraries-form.blade.php:/var/www/html/resources/views/admin/keyword-libraries/form.blade.php:ro
+  - D:\GEOFlow\overrides\ai-model-form-fields.blade.php:/var/www/html/resources/views/admin/ai-models/_form-fields.blade.php:ro
+  - D:\GEOFlow\overrides\GeoModelPicker.php:/var/www/html/app/Support/GeoAudit/GeoModelPicker.php:ro
+  - D:\GEOFlow\overrides\GeoCitationConfirm.php:/var/www/html/app/Support/GeoAudit/GeoCitationConfirm.php:ro
+  - D:\GEOFlow\overrides\GeoArticleGenReport.php:/var/www/html/app/Support/GeoAudit/GeoArticleGenReport.php:ro
+  - D:\GEOFlow\overrides\GeoArticleAiInject.php:/var/www/html/app/Support/GeoAudit/GeoArticleAiInject.php:ro
+  - D:\GEOFlow\overrides\GeoCheckReport.php:/var/www/html/app/Support/GeoAudit/GeoCheckReport.php:ro
+  - D:\GEOFlow\overrides\GeoTitleGen.php:/var/www/html/app/Support/GeoAudit/GeoTitleGen.php:ro
+  - D:\GEOFlow\overrides\TitleAiGenerationService.php:/var/www/html/app/Services/GeoFlow/TitleAiGenerationService.php:ro
+  - D:\GEOFlow\overrides\title-ai-generate.blade.php:/var/www/html/resources/views/admin/title-libraries/ai-generate.blade.php:ro
+  - D:\GEOFlow\overrides\GenerateTitlesWithAiRequest.php:/var/www/html/app/Http/Requests/Admin/GenerateTitlesWithAiRequest.php:ro
+  - D:\GEOFlow\overrides\php-custom.ini:/usr/local/etc/php/conf.d/99-zz-custom.ini:ro
+  - D:\GEOFlow\overrides\SystemHostResolver.php:/var/www/html/app/Services/Outbound/SystemHostResolver.php:ro
+  - D:\GEOFlow\overrides\url-import-show.blade.php:/var/www/html/resources/views/admin/url-import/show.blade.php:ro
+  - D:\GEOFlow\overrides\console.php:/var/www/html/routes/console.php:ro
+  - D:\GEOFlow\overrides\AdminUiRegistry.php:/var/www/html/app/Support/AdminUiRegistry.php:ro
+  - D:\GEOFlow\overrides\AiProviderEndpointPolicy.php:/var/www/html/app/Services/GeoFlow/AiVisibility/AiProviderEndpointPolicy.php:ro
+  - D:\GEOFlow\overrides\DoubaoSearchCustomClient.php:/var/www/html/app/Services/GeoFlow/AiVisibility/DoubaoSearchCustomClient.php:ro
+  - D:\GEOFlow\overrides\geo-plan-index.blade.php:/var/www/html/resources/views/admin/geo-plan/index.blade.php:ro
+  - D:\GEOFlow\overrides\geo-tools-index.blade.php:/var/www/html/resources/views/admin/geo-tools/index.blade.php:ro
+  # AI 质检配置类异常降级 + 小时级去重：把 log 风暴源头从 ERROR 降为 warning。
+  # 只覆盖 Job 本身，ArticleAiQualityPolicyResolver 未改动（fail-fast 语义保持原样）。
+  - D:\GEOFlow\overrides\ReconcileArticleAiQualityJob.php:/var/www/html/app/Jobs/ReconcileArticleAiQualityJob.php:ro
+  # 【AI 质检健康检查误报修复 A1】WorkerStopping 不再删除心跳行。
+  # 根因：backfill worker 每约 25 分钟因 queue:work --max-jobs=25 回收一次，退出时立刻
+  # 删心跳行 → 约 1.2 秒 "backfill 无消费者" 空窗；ai-quality-health 每分钟定点采样
+  # 且 degraded 即 exit(1)，撞进空窗就误报 backfill_consumer_missing（每天约 9 次）。
+  # 改法：不再删行，让 ai_quality_worker_stale_seconds(300s) 自然过期；pruneStale 保留。
+  - D:\GEOFlow\overrides\AppServiceProvider.php:/var/www/html/app/Providers/AppServiceProvider.php:ro
+  # 【AI 质检健康检查误报修复 A2】degraded 不再 exit(1)，只有 unavailable 才失败。
+  # degraded 仍会打印 issues 并写入 ai_quality_health_changed WARNING，只是不再打 ERROR。
+  - D:\GEOFlow\overrides\ArticleAiQualityHealthCommand.php:/var/www/html/app/Console/Commands/ArticleAiQualityHealthCommand.php:ro
+  # 【A1 配套约束】仅加注释、无逻辑改动：freshCounts() 的返回值只会"偏大"（recreate 后
+  # 旧行残留 ≤300s），所有消费方必须用 `=== 0` / `< expected`，不能用 `!==` 或 `>`。
+  # 放在这个类里是因为下一个改 freshCounts() 的人不会去翻 AppServiceProvider 的注释。
+  # ⚠️ 升级镜像后请 diff 本文件与 src 同名文件：差异应**只有注释**；若 src 出现真正的
+  #    逻辑改动，说明这份 override 已漂移，必须重新对齐后再上线。
+  - D:\GEOFlow\overrides\ArticleAiQualityWorkerLiveness.php:/var/www/html/app/Services/GeoFlow/ArticleAiQualityWorkerLiveness.php:ro
+
+x-deepseek-dns-pin: &deepseek-dns-pin
+  extra_hosts:
+    - "api.deepseek.com:119.188.175.46"
+    - "api.deepseek.com:221.204.163.76"
+    # 让容器能访问宿主机上的服务（GEO 示范页 HTTPS 预览、本地采集服务都用得上）
+    - "host.docker.internal:host-gateway"
+
+# 本地部署覆盖：所有容器共用同一份挂载（x-geo-volumes）。
+# 之前只给 app 挂、没给 queue/scheduler 挂，导致队列任务跑镜像里的旧代码。
+services:
+  app:
+    environment:
+      AUTO_OPTIMIZE: "false"
+    # 【GEO 诊断器接线】覆盖单个 blade 模板 + 追加路由 + 诊断引擎（不改镜像内其他文件）
+    # 删除这段 volumes 即完全恢复原样。
+    # 【GEO 本地覆盖】所有挂载点集中定义在文件顶部的 x-geo-volumes，
+    # app / queue / scheduler 等容器共用同一份——否则队列任务跑的是镜像里的旧代码。
+    volumes: *geo-volumes
+    <<: *deepseek-dns-pin
+
+  queue:
+    volumes: *geo-volumes
+    environment:
+      AUTO_OPTIMIZE: "false"
+    <<: *deepseek-dns-pin
+
+  ai-quality-queue:
+    volumes: *geo-volumes
+    environment:
+      AUTO_OPTIMIZE: "false"
+    <<: *deepseek-dns-pin
+
+  ai-quality-backfill-queue:
+    volumes: *geo-volumes
+    environment:
+      AUTO_OPTIMIZE: "false"
+    <<: *deepseek-dns-pin
+
+  ai-optimization-queue:
+    volumes: *geo-volumes
+    environment:
+      AUTO_OPTIMIZE: "false"
+    <<: *deepseek-dns-pin
+
+  knowledge-queue:
+    volumes: *geo-volumes
+    environment:
+      AUTO_OPTIMIZE: "false"
+    <<: *deepseek-dns-pin
+
+  scheduler:
+    volumes: *geo-volumes
+    environment:
+      AUTO_OPTIMIZE: "false"
+    <<: *deepseek-dns-pin
+
+  reverb:
+    environment:
+      AUTO_OPTIMIZE: "false"
+
+  # web（nginx）原本的健康检查在 Docker Desktop 上会误报 unhealthy：
+  #   test: wget -q --header='Host: ...' -O /dev/null http://127.0.0.1/up || exit 1
+  # 实测证据：
+  #   - 手动在容器内跑同一条命令 -> 退出码 0，nginx 访问日志有记录，返回 200
+  #   - 宿主机访问 /up -> 200，耗时 0.057s
+  #   - 但 Docker 健康检查连续 11 次失败，报 "wget: error getting response"，
+  #     且这 11 次请求在 nginx 访问日志里完全不存在
+  #   → 说明健康检查这个执行上下文里访问不到容器自身的 loopback，是 Docker Desktop
+  #     （WSL2 后端）的环境特性，不是 GEOFlow 的问题，站点本身完全正常。
+  # 改法：先按原方式做 HTTP 探测，失败退到 TCP 端口探测；并把命中的方式写到
+  # /tmp/hc，方便日后排查（docker exec geoflow-web-prod cat /tmp/hc）。
+  web:
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "if wget -q -O /dev/null --header='Host: localhost' http://127.0.0.1/up; then echo WGET >/tmp/hc; exit 0; fi; if nc -z 127.0.0.1 80; then echo NC >/tmp/hc; exit 0; fi; echo FAIL >/tmp/hc; exit 1",
+        ]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
