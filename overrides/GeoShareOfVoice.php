@@ -77,6 +77,496 @@ final class GeoShareOfVoice
         return $list[0] ?? null;
     }
 
+    // =========================================================================
+    // 【本地扩展】品牌档案的写入层（增 / 改 / 删）
+    //
+    // 背景：这份档案原来是纯手工编辑的 JSON，没有任何程序的写入路径，
+    // 管理员想加第三家客户只能上服务器改文件。加写入时必须保证三件事：
+    //   ① 先备份原文件（写坏了能拿回来）
+    //   ② 原子替换（先写 .tmp，fsync 后 rename，绝不直接覆盖原文件）
+    //   ③ 保留 _note / _limit / _fields 等说明字段与键顺序
+    //
+    // 这是全局共享的配置文件，写坏了所有按品牌统计的页面会一起挂，
+    // 所以写入逻辑全部收敛在 writeArchive() 一处，增删改都走它。
+    // =========================================================================
+
+    /** slug 允许的字符：小写字母 / 数字 / 连字符，且首尾不能是连字符（最长 64） */
+    public const SLUG_PATTERN = '/^[a-z0-9](?:[a-z0-9-]{0,62}[a-z0-9])?$/';
+
+    /**
+     * 品牌档案里有没有官网（无官网品牌 has_site=false）。
+     *
+     * 老档案没有 has_site 字段，按「有官网」处理 —— 不能因为新增字段就把
+     * 现有两个品牌的口径改掉。
+     */
+    public static function hasSite(?array $brand, bool $defaultIfMissing = true): bool
+    {
+        if ($brand === null) {
+            return $defaultIfMissing;
+        }
+        if (array_key_exists('has_site', $brand)) {
+            return (bool) $brand['has_site'];
+        }
+
+        return $defaultIfMissing;
+    }
+
+    /**
+     * 按 slug 或品牌名找一条档案（大小写不敏感）。
+     *
+     * 和 brand() 的区别：brand() 认不出来会回退到第一个品牌（页面不白屏），
+     * 这里认不出来就是 null —— 校验、删除、查依赖都必须知道"真的不存在"。
+     *
+     * @return array<string,mixed>|null
+     */
+    public static function findBrand(string $needle): ?array
+    {
+        $needle = self::lower($needle);
+        if ($needle === '') {
+            return null;
+        }
+        $list = self::brands();
+        foreach ($list as $b) {
+            if (self::lower((string) ($b['slug'] ?? '')) === $needle) {
+                return $b;
+            }
+        }
+        foreach ($list as $b) {
+            if (self::lower((string) ($b['name'] ?? '')) === $needle) {
+                return $b;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * 整档重写 brands[]（保留 _note / _limit / _fields / default 等其余键）。
+     *
+     * @param  list<array<string,mixed>>  $brands
+     * @return bool 写入成功与否（失败时原文件未被改动）
+     */
+    public static function saveBrands(array $brands): bool
+    {
+        $data = self::raw();
+        $clean = [];
+        foreach ($brands as $b) {
+            if (is_array($b)) {
+                $clean[] = $b;
+            }
+        }
+        $data['brands'] = array_values($clean);
+
+        // default 必须指向仍然存在的品牌：否则 resolveSlug() 会拿着一个不存在的
+        // slug 去 brand()，静默回退到第一个品牌，页面上的"当前品牌"和实际
+        // 统计口径就对不上了。
+        $default = trim((string) ($data['default'] ?? ''));
+        $slugs = [];
+        foreach ($data['brands'] as $b) {
+            $s = trim((string) ($b['slug'] ?? ''));
+            if ($s !== '') {
+                $slugs[] = $s;
+            }
+        }
+        if ($default === '' || ! in_array($default, $slugs, true)) {
+            $data['default'] = $slugs[0] ?? '';
+        }
+
+        return self::writeArchive($data);
+    }
+
+    /**
+     * 校验 + 新增/更新一个品牌。
+     *
+     * @param  array<string,mixed>  $in  表单输入（name/slug/site_url/aliases/competitors/note）
+     * @param  string|null  $editingSlug  编辑时的原 slug（新增传 null）
+     * @return array{ok:bool,errors:list<string>,slug:string}
+     */
+    public static function saveBrand(array $in, ?string $editingSlug = null): array
+    {
+        $checked = self::validateBrandInput($in, $editingSlug);
+        if ($checked['ok'] !== true) {
+            return ['ok' => false, 'errors' => $checked['errors'], 'slug' => ''];
+        }
+
+        $brand = $checked['brand'];
+        $slug = (string) ($brand['slug'] ?? '');
+        $target = $editingSlug !== null ? trim($editingSlug) : '';
+
+        $list = self::brands();
+        $replaced = false;
+        if ($target !== '') {
+            foreach ($list as $i => $b) {
+                if (trim((string) ($b['slug'] ?? '')) === $target) {
+                    $list[$i] = $brand;
+                    $replaced = true;
+                    break;
+                }
+            }
+        }
+        if (! $replaced) {
+            $list[] = $brand;
+        }
+
+        if (! self::saveBrands($list)) {
+            return [
+                'ok' => false,
+                'errors' => ['写入 storage/app/geo-brands.json 失败（备份或原子替换没成功），品牌档案保持原样，请检查 storage 目录写权限'],
+                'slug' => '',
+            ];
+        }
+
+        return ['ok' => true, 'errors' => [], 'slug' => $slug];
+    }
+
+    /**
+     * 表单输入 → 档案数组。只做结构转换，不做合法性判断（判断在 validateBrandInput()）。
+     *
+     * @param  array<string,mixed>  $in
+     * @param  array<string,mixed>|null  $existing  编辑时的原记录（用于保留 full_name 等表单里没有的字段）
+     * @return array<string,mixed>
+     */
+    public static function buildBrandFromInput(array $in, ?array $existing = null): array
+    {
+        $name = trim((string) ($in['name'] ?? ''));
+        $slug = self::lower($in['slug'] ?? '');
+        $siteUrl = trim((string) ($in['site_url'] ?? ''));
+        if ($siteUrl !== '' && preg_match('#^https?://#i', $siteUrl) !== 1) {
+            // 用户只写 www.binsis.cn 时自动补协议，避免"看起来填了但其实不是合法 URL"
+            $siteUrl = 'https://'.ltrim($siteUrl, '/');
+        }
+
+        $aliases = self::splitList((string) ($in['aliases'] ?? ''));
+        if ($aliases === [] && $name !== '') {
+            $aliases = [$name];
+        }
+
+        $brand = [
+            'slug' => $slug,
+            'name' => $name,
+        ];
+        // full_name 不在表单里（表单只暴露 name/slug/site_url/aliases/competitors/note），
+        // 编辑时必须原样带回去，否则保存一次就把公司全称弄丢了。
+        $fullName = trim((string) ($existing['full_name'] ?? ''));
+        if ($fullName !== '') {
+            $brand['full_name'] = $fullName;
+        }
+
+        $brand['site_url'] = $siteUrl;
+        // 留空 = 该品牌无官网。写成显式字段，报告页下一批按它折叠官网指标；
+        // 读的时候 hasSite() 对没有这个字段的老档案默认 true。
+        $brand['has_site'] = $siteUrl !== '';
+        $brand['aliases'] = $aliases;
+        $brand['competitors'] = self::parseCompetitorsText((string) ($in['competitors'] ?? ''));
+        $brand['note'] = trim((string) ($in['note'] ?? ''));
+
+        return $brand;
+    }
+
+    /**
+     * 校验品牌档案输入。
+     *
+     * @param  array<string,mixed>  $in
+     * @param  string|null  $editingSlug  编辑时的原 slug（新增传 null）
+     * @return array{ok:bool,errors:list<string>,brand:array<string,mixed>}
+     */
+    public static function validateBrandInput(array $in, ?string $editingSlug = null): array
+    {
+        $errors = [];
+        $target = $editingSlug !== null ? trim($editingSlug) : '';
+        $existing = $target !== '' ? self::findBrand($target) : null;
+        $brand = self::buildBrandFromInput($in, $existing);
+
+        $name = (string) ($brand['name'] ?? '');
+        $slug = (string) ($brand['slug'] ?? '');
+
+        if ($name === '') {
+            $errors[] = '品牌名不能为空';
+        } elseif (mb_strlen($name, 'UTF-8') > 64) {
+            $errors[] = '品牌名太长（最多 64 个字）';
+        }
+
+        if ($slug === '') {
+            $errors[] = '短标识 slug 不能为空（用于 URL，例如 rebecca）';
+        } elseif (preg_match(self::SLUG_PATTERN, $slug) !== 1) {
+            $errors[] = '短标识 slug 只能用小写字母、数字和连字符（-），且不能以连字符开头或结尾，最长 64 位。当前填的是「'.$slug.'」';
+        } elseif ($target !== '' && $slug !== $target) {
+            // slug 是历史数据的品牌归属键（keyword_libraries 名字前缀、ai_visibility_batches.brand_slug），
+            // 允许改就等于把旧报告和旧词库的归属全打乱，所以禁止。
+            $errors[] = '短标识 slug 不允许修改（历史词库和核查批次靠它关联品牌）：当前值是「'.$target.'」';
+        }
+
+        // slug 唯一
+        foreach (self::brands() as $b) {
+            $otherSlug = trim((string) ($b['slug'] ?? ''));
+            if ($otherSlug === '' || ($target !== '' && $otherSlug === $target)) {
+                continue;
+            }
+            if (self::lower($otherSlug) === $slug) {
+                $errors[] = '短标识 slug「'.$slug.'」已被品牌「'.trim((string) ($b['name'] ?? '')).'」占用，请换一个';
+                break;
+            }
+        }
+
+        // 品牌名唯一
+        if ($name !== '') {
+            $nameKey = self::lower($name);
+            foreach (self::brands() as $b) {
+                $otherSlug = trim((string) ($b['slug'] ?? ''));
+                if ($target !== '' && $otherSlug === $target) {
+                    continue;
+                }
+                if (self::lower((string) ($b['name'] ?? '')) === $nameKey) {
+                    $errors[] = '品牌名「'.$name.'」已存在（slug='.$otherSlug.'），不能重复添加';
+                    break;
+                }
+            }
+        }
+
+        $url = (string) ($brand['site_url'] ?? '');
+        if ($url !== '' && filter_var($url, FILTER_VALIDATE_URL) === false) {
+            $errors[] = '官网地址格式不对：「'.$url.'」，需要形如 https://www.example.com（留空表示该品牌无官网）';
+        }
+
+        if (mb_strlen((string) ($brand['note'] ?? ''), 'UTF-8') > 500) {
+            $errors[] = '备注太长（最多 500 字）';
+        }
+
+        return ['ok' => $errors === [], 'errors' => $errors, 'brand' => $brand];
+    }
+
+    /**
+     * 删除品牌之前先查它名下的数据。
+     *
+     * 有词库或核查批次的品牌不能删：词库名写成「品牌名｜类别」，批次靠 brand_slug 归属，
+     * 删了档案这些数据就成了孤儿（列表里看得见、报告里打不开）。
+     *
+     * @return array{libraries:list<string>,batches:int}
+     */
+    public static function brandDependencies(string $slug, string $name): array
+    {
+        $slug = trim($slug);
+        $name = trim($name);
+        $libraries = [];
+        $batches = 0;
+
+        if ($name !== '') {
+            try {
+                $rows = DB::table('keyword_libraries')
+                    ->where('name', 'like', $name.'｜%')
+                    ->orWhere('name', 'like', $name.'|%')
+                    ->orderBy('id')
+                    ->pluck('name')
+                    ->all();
+                foreach ($rows as $r) {
+                    $libraries[] = (string) $r;
+                }
+            } catch (\Throwable) {
+                // 查不到就当没有关联：宁可让用户自己判断，也不要因为一次查询失败就删不掉
+            }
+        }
+
+        if ($slug !== '') {
+            try {
+                $batches = (int) DB::table('ai_visibility_batches')->where('brand_slug', $slug)->count();
+            } catch (\Throwable) {
+                $batches = 0;
+            }
+        }
+
+        return ['libraries' => $libraries, 'batches' => $batches];
+    }
+
+    /**
+     * 删除一个品牌（有关联数据时拒绝，并说明理由）。
+     *
+     * @return array{ok:bool,message:string}
+     */
+    public static function deleteBrand(string $slug): array
+    {
+        $slug = trim($slug);
+        $row = null;
+        foreach (self::brands() as $b) {
+            if (trim((string) ($b['slug'] ?? '')) === $slug) {
+                $row = $b;
+                break;
+            }
+        }
+        if ($row === null) {
+            return ['ok' => false, 'message' => '品牌档案里没有 slug=「'.$slug.'」的品牌，可能已被删除'];
+        }
+
+        $name = trim((string) ($row['name'] ?? ''));
+        $dep = self::brandDependencies($slug, $name);
+
+        $reasons = [];
+        if ($dep['libraries'] !== []) {
+            $preview = array_slice($dep['libraries'], 0, 3);
+            $reasons[] = '关键词库 '.count($dep['libraries']).' 个（'.implode('、', $preview)
+                .(count($dep['libraries']) > 3 ? ' 等' : '').'）';
+        }
+        if ($dep['batches'] > 0) {
+            $reasons[] = '核查批次 '.$dep['batches'].' 批（历史报告靠 brand_slug 归属品牌）';
+        }
+        if ($reasons !== []) {
+            return [
+                'ok' => false,
+                'message' => '不能删除「'.$name.'」：名下还有 '.implode('；', $reasons)
+                    .'。请先处理这些数据（删词库 / 等历史报告不再需要），或只编辑档案字段保留品牌。',
+            ];
+        }
+
+        $list = [];
+        foreach (self::brands() as $b) {
+            if (trim((string) ($b['slug'] ?? '')) !== $slug) {
+                $list[] = $b;
+            }
+        }
+        if ($list === []) {
+            return ['ok' => false, 'message' => '不能删除最后一个品牌：品牌档案至少要保留一个品牌，否则所有按品牌统计的页面都没有口径'];
+        }
+
+        if (! self::saveBrands($list)) {
+            return ['ok' => false, 'message' => '写入 storage/app/geo-brands.json 失败，品牌未删除，档案保持原样'];
+        }
+
+        return ['ok' => true, 'message' => '已删除品牌「'.$name.'」，档案里还剩 '.count($list).' 个品牌'];
+    }
+
+    /**
+     * 品牌档案里「按行/按逗号」拆出来的列表（别名输入用）。
+     *
+     * @return list<string>
+     */
+    public static function splitList(string $text): array
+    {
+        $parts = preg_split('/[\r\n,，、;；]+/u', $text) ?: [];
+        $out = [];
+        foreach ($parts as $p) {
+            $p = trim((string) $p);
+            if ($p === '' || in_array($p, $out, true)) {
+                continue;
+            }
+            $out[] = $p;
+        }
+
+        return $out;
+    }
+
+    /**
+     * 竞品输入 → competitors[]。每行「名称=别名1,别名2」，没有等号就是只有名称。
+     *
+     * @return list<array{name:string,aliases:list<string>}>
+     */
+    public static function parseCompetitorsText(string $text): array
+    {
+        $out = [];
+        foreach (preg_split('/[\r\n]+/u', $text) ?: [] as $line) {
+            $line = trim((string) $line);
+            if ($line === '') {
+                continue;
+            }
+            $name = $line;
+            $aliasText = '';
+            if (preg_match('/^(.+?)\s*[=＝]\s*(.*)$/u', $line, $m) === 1) {
+                $name = trim((string) $m[1]);
+                $aliasText = trim((string) $m[2]);
+            }
+            if ($name === '') {
+                continue;
+            }
+            $aliases = $aliasText !== '' ? self::splitList($aliasText) : [];
+            if ($aliases === []) {
+                $aliases = [$name];
+            }
+            $out[] = ['name' => $name, 'aliases' => array_values($aliases)];
+        }
+
+        return $out;
+    }
+
+    /**
+     * 原子写档案：备份 → 写 .tmp → fsync → rename 覆盖。
+     *
+     * 为什么不直接 file_put_contents()：那是"截断 + 写"，写到一半进程被杀 /
+     * 磁盘满，留下的是半截 JSON，json_decode 失败，所有品牌页面同时失去口径。
+     *
+     * @param  array<string,mixed>  $data
+     */
+    private static function writeArchive(array $data): bool
+    {
+        $path = storage_path(self::CONFIG);
+        $dir = dirname($path);
+        if (! is_dir($dir) || ! is_writable($dir)) {
+            return false;
+        }
+
+        $json = json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        if (! is_string($json) || $json === '') {
+            return false;
+        }
+        $payload = $json."\n";
+
+        // ① 备份当前版本（文件名按需求：geo-brands.json.bak-<YmdHis>）
+        if (is_file($path)) {
+            if (! @copy($path, self::backupPath($path))) {
+                return false;
+            }
+        }
+
+        // ② 同目录临时文件 + fsync + rename（rename 在同一文件系统内是原子的）
+        $tmp = $path.'.tmp';
+        $fh = @fopen($tmp, 'wb');
+        if ($fh === false) {
+            return false;
+        }
+        $written = @fwrite($fh, $payload);
+        $ok = $written !== false && $written === strlen($payload);
+        if ($ok) {
+            $ok = @fflush($fh) !== false;
+        }
+        if ($ok && function_exists('fsync')) {
+            @fsync($fh);
+        }
+        @fclose($fh);
+
+        if (! $ok) {
+            @unlink($tmp);
+
+            return false;
+        }
+
+        if (! @rename($tmp, $path)) {
+            @unlink($tmp);
+
+            return false;
+        }
+
+        self::$cache = null;
+
+        return true;
+    }
+
+    /** 备份文件名：geo-brands.json.bak-20261027153000（同一秒内多次写入自动加序号） */
+    private static function backupPath(string $path): string
+    {
+        $base = $path.'.bak-'.date('YmdHis');
+        $candidate = $base;
+        $i = 1;
+        while (file_exists($candidate) && $i < 1000) {
+            $candidate = $base.'-'.$i;
+            $i++;
+        }
+
+        return $candidate;
+    }
+
+    /** mb_strtolower 的短封装（统一 UTF-8，避免默认编码问题） */
+    private static function lower(mixed $v): string
+    {
+        return mb_strtolower(trim((string) $v), 'UTF-8');
+    }
+
     /**
      * 拼出参与 SOV 计算的全部对象：自己 + 竞品。
      *

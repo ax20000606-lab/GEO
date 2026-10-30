@@ -878,6 +878,75 @@ require_once __DIR__.'/../app/Support/GeoAudit/GeoKeywordGen.php';
 require_once __DIR__.'/../app/Support/GeoAudit/GeoKeywordGenReport.php';
 require_once __DIR__.'/../app/Support/GeoAudit/GeoCitationRecord.php';
 
+// =============================================================================
+// 【标题反推提问 T04】页面骨架
+//
+// 五件套必须全 require：Store 持有枚举常量、Industry 持有 22 格与词表、
+// Rules 在运行期引用 Store::MATRIX_STAGES。**漏任何一个都会 Class not found**
+// （镜像用的是权威 classmap，新文件不会被自动加载）。
+// 顺序无所谓，但一个都不能少。
+// =============================================================================
+require_once __DIR__.'/../app/Support/GeoAudit/GeoTitleQuestionStore.php';
+require_once __DIR__.'/../app/Support/GeoAudit/GeoTitleQuestionIndustry.php';
+require_once __DIR__.'/../app/Support/GeoAudit/GeoTitleQuestionSlots.php';
+require_once __DIR__.'/../app/Support/GeoAudit/GeoTitleQuestionRules.php';
+require_once __DIR__.'/../app/Support/GeoAudit/GeoTitleQuestionReport.php';
+require_once __DIR__.'/../app/Support/GeoAudit/GeoTitleQuestionPrompt.php';
+require_once __DIR__.'/../app/Support/GeoAudit/GeoTitleQuestionGenerator.php';
+
+Route::prefix($adminPrefix)->name('admin.')->middleware(['admin.locale', 'admin.auth'])->group(function (): void {
+    // 页面外壳与其它 geo_* 工具页一致（admin.geo-tools.index = 侧边栏 + toolHtml 插槽）
+    $tqView = static fn (string $html, string $pageTitle) => response()->view('admin.geo-tools.index', [
+        'pageTitle' => $pageTitle,
+        'activeMenu' => 'geo_title_question',
+        'toolHtml' => $html,
+    ]);
+
+    // 表单页 + 历史批次。生成能力（T03）未接入，所以输入框是 disabled —— 见 formPage 注释。
+    Route::get('title-question', function () use ($tqView) {
+        $slug = \App\Support\GeoAudit\GeoShareOfVoice::resolveSlug((string) request()->query('brand', ''));
+
+        return $tqView(\App\Support\GeoAudit\GeoTitleQuestionReport::formPage($slug), '标题反推提问');
+    })->name('title-question');
+
+    // 报告页。batch 缺省时由 reportPage 回落到「该品牌最近一批」，不会 500。
+    Route::get('title-question/report', function () use ($tqView) {
+        $slug = \App\Support\GeoAudit\GeoShareOfVoice::resolveSlug((string) request()->query('brand', ''));
+        $batchId = (int) request()->query('batch', 0);
+
+        return $tqView(
+            \App\Support\GeoAudit\GeoTitleQuestionReport::reportPage($batchId, $slug),
+            '标题反推提问 · 报告'
+        );
+    })->name('title-question.report');
+
+    // 生成：跑一次模型 → 落库 → 直接跳到报告页。
+    //
+    // 为什么同步而不是丢队列：
+    //   一次生成约 20–40 秒（12 条候选）。这个时长用户可以接受，而且他要的
+    //   就是「输入标题 → 立刻看到 7 条」这个即时感。丢队列反而要轮询。
+    //   整链时间预算 90 秒由 GeoChat 兜住，不会顶到网关超时。
+    Route::post('title-question/generate', function () {
+        $title = trim((string) request()->input('title', ''));
+        $slug = \App\Support\GeoAudit\GeoShareOfVoice::resolveSlug((string) request()->input('brand', ''));
+
+        if ($title === '') {
+            return redirect()->route('admin.title-question')->withErrors(['title' => '请先填标题']);
+        }
+
+        $result = \App\Support\GeoAudit\GeoTitleQuestionGenerator::run($title, $slug);
+
+        if (($result['batch_id'] ?? 0) > 0) {
+            // 失败也跳报告页：那里会显示失败原因 + 已淘汰明细，比跳回表单信息量大
+            return redirect()->route('admin.title-question.report', ['batch' => (int) $result['batch_id']]);
+        }
+
+        return redirect()->route('admin.title-question')
+            ->withErrors(['title' => (string) ($result['error'] ?? '生成失败')]);
+    })->name('title-question.generate');
+});
+
+
 Route::prefix($adminPrefix)->name('admin.')->middleware(['admin.locale', 'admin.auth'])->group(function (): void {
     Route::match(['get', 'post'], 'geo-audit', function (\Illuminate\Http\Request $request) {
         $adminBasePath = rtrim((string) config('geoflow.admin_base_path', '/geo_admin'), '/');
@@ -1302,13 +1371,14 @@ Route::prefix($adminPrefix)->name('admin.')->middleware(['admin.locale', 'admin.
             'activeMenu' => 'geo_audit',
             'toolHtml' => $html,
         ]);
-        $libraries = \Illuminate\Support\Facades\DB::table('keyword_libraries')
-            ->orderBy('id')
-            ->get(['id', 'name'])
-            ->all();
+          // 【本地修复】同上：GeoKeywordReport 的下拉也要显示「现有 N 词」，一并取出。
+          $libraries = \Illuminate\Support\Facades\DB::table('keyword_libraries')
+              ->orderBy('id')
+              ->get(['id', 'name', 'keyword_count'])
+              ->all();
 
-        // ① 写入关键词库
-        if ((string) $request->query('save', '') === '1') {
+          // ① 写入关键词库
+          if ((string) $request->query('save', '') === '1') {
             $last = $request->hasSession() ? $request->session()->get('geo_kw_last') : null;
             $picked = (string) ($request->query('picked') ?? 'none');
             $libId = (int) ($request->query('lib') ?? 0);
@@ -1399,8 +1469,16 @@ Route::prefix($adminPrefix)->name('admin.')->middleware(['admin.locale', 'admin.
 //   12 题串行问模型要 60–100 秒。拆成「清单页 + 逐题 fetch(?probe=1)」后，
 //   单次请求最长 8 秒左右，既不撞超时，用户也能一题一题看到结果出来。
 // ==========================================================================
+
+// 【本地修复】原来覆盖核查表单页给人选 6/12/20 题，79 题的词库最多只能跑 20 题，
+// 剩下的永远不知道情况。现在改成跑全部；但保留一个安全上限，防止误操作把几千题一次塞进队列。
+// 用 define 而不是 const：这个路由文件在测试/命令行里可能被重复加载，const 重复声明会致命。
+if (! defined('COVERAGE_MAX_QUESTIONS')) {
+    define('COVERAGE_MAX_QUESTIONS', 500);
+}
+
 Route::prefix($adminPrefix)->name('admin.')->middleware(['admin.locale', 'admin.auth'])->group(function (): void {
-    Route::get('coverage-check', function (\Illuminate\Http\Request $request) {
+    Route::match(['get', 'post'], 'coverage-check', function (\Illuminate\Http\Request $request) {
         $adminBase = rtrim((string) config('geoflow.admin_base_path', '/geo_admin'), '/');
         $toolView = static fn (string $html, string $title) => response()->view('admin.geo-tools.index', [
             'pageTitle' => $title,
@@ -1408,6 +1486,107 @@ Route::prefix($adminPrefix)->name('admin.')->middleware(['admin.locale', 'admin.
             'toolHtml' => $html,
         ]);
         $sess = $request->hasSession() ? $request->session() : null;
+
+        // ---------- ⓿ 品牌档案：新增 / 编辑 / 删除（POST）----------
+        //
+        // 【本地扩展】品牌档案原来是纯手工编辑的 storage/app/geo-brands.json，
+        // 管理员想加第三家客户必须上服务器改文件 —— 这是产品缺口。
+        // 这里接住核查页内联表单的提交：校验 → 备份 → 原子替换 → 切到该品牌。
+        //
+        // 失败不重定向：把错误和刚填的值原样渲染回表单，用户不用重填一遍。
+        // 成功才 302 回核查页（PRG），并在 URL 上带 ?brand=<新 slug>，
+        // web.php 顶部的品牌加载段会顺手写 cookie，chip 立刻高亮新品牌。
+        if ($request->isMethod('post')) {
+            $brandAction = (string) $request->input('brand_action', 'save');
+            $editingSlug = trim((string) $request->input('brand_slug', ''));
+
+            $brandLibraries = \Illuminate\Support\Facades\DB::table('keyword_libraries')
+                ->orderBy('id')
+                ->get(['id', 'name', 'keyword_count'])
+                ->all();
+            // 失败重渲染时的覆盖表单初值：品牌跟着 URL 走，其余留空（POST 表单没带它们）
+            $brandOld = [
+                'brand' => (string) ($request->query('brand') ?? ''),
+                'url' => '',
+                'competitors' => '',
+                'questions' => '',
+                'lib' => 0,
+                'rounds' => 3,
+            ];
+
+            if ($brandAction === 'delete') {
+                $deleted = \App\Support\GeoAudit\GeoShareOfVoice::deleteBrand($editingSlug);
+                if ($deleted['ok']) {
+                    $sess?->flash('brand_notice', (string) $deleted['message']);
+                    // 删掉的正好是当前口径 → 切到剩下的第一个品牌，否则 cookie 指向一个
+                    // 已经不存在的 slug，页面会显示"当前品牌不在档案里"。
+                    $currentSlug = trim(\App\Support\GeoAudit\GeoShareOfVoice::resolveSlug());
+                    $remaining = \App\Support\GeoAudit\GeoShareOfVoice::brands();
+                    $fallbackSlug = trim((string) ($remaining[0]['slug'] ?? ''));
+                    $nextSlug = $currentSlug !== '' && $currentSlug !== $editingSlug ? $currentSlug : $fallbackSlug;
+                    // 当前口径本身也已经不在档案里（比如连删两个品牌）→ 落到第一个，
+                    // 否则跳过去的 URL 会带着一个不存在的 slug，页面显示"当前品牌不在档案里"。
+                    if ($nextSlug !== '' && \App\Support\GeoAudit\GeoShareOfVoice::findBrand($nextSlug) === null) {
+                        $nextSlug = $fallbackSlug;
+                    }
+
+                    return redirect()->to($adminBase.'/coverage-check'
+                        .($nextSlug !== '' ? '?brand='.rawurlencode($nextSlug) : ''));
+                }
+
+                return $toolView(\App\Support\GeoAudit\GeoCoverageReport::formPage(
+                    $brandOld,
+                    $brandLibraries,
+                    '',
+                    [
+                        'mode' => 'edit',
+                        'editSlug' => $editingSlug,
+                        'values' => [
+                            'name' => trim((string) $request->input('bf_name', '')),
+                            'slug' => (string) $request->input('bf_slug', ''),
+                            'site_url' => (string) $request->input('bf_site_url', ''),
+                            'aliases' => (string) $request->input('bf_aliases', ''),
+                            'competitors' => (string) $request->input('bf_competitors', ''),
+                            'note' => (string) $request->input('bf_note', ''),
+                        ],
+                        'errors' => [(string) $deleted['message']],
+                    ]
+                ), '覆盖核查');
+            }
+
+            $brandInput = [
+                'name' => (string) $request->input('bf_name', ''),
+                'slug' => (string) $request->input('bf_slug', ''),
+                'site_url' => (string) $request->input('bf_site_url', ''),
+                'aliases' => (string) $request->input('bf_aliases', ''),
+                'competitors' => (string) $request->input('bf_competitors', ''),
+                'note' => (string) $request->input('bf_note', ''),
+            ];
+            $saved = \App\Support\GeoAudit\GeoShareOfVoice::saveBrand(
+                $brandInput,
+                $editingSlug !== '' ? $editingSlug : null
+            );
+
+            if ($saved['ok']) {
+                $sess?->flash('brand_notice', $editingSlug !== ''
+                    ? '已保存品牌「'.$brandInput['name'].'」的档案（写前已备份）'
+                    : '已新增品牌「'.$brandInput['name'].'」，当前品牌已切到它（写前已备份）');
+
+                return redirect()->to($adminBase.'/coverage-check?brand='.rawurlencode((string) $saved['slug']));
+            }
+
+            return $toolView(\App\Support\GeoAudit\GeoCoverageReport::formPage(
+                $brandOld,
+                $brandLibraries,
+                '',
+                [
+                    'mode' => $editingSlug !== '' ? 'edit' : 'create',
+                    'editSlug' => $editingSlug,
+                    'values' => $brandInput,
+                    'errors' => (array) $saved['errors'],
+                ]
+            ), '覆盖核查');
+        }
 
         // ---------- ① 逐题核查（AJAX，返回 JSON）----------
         if ((string) $request->query('probe', '') === '1') {
@@ -1431,6 +1610,19 @@ Route::prefix($adminPrefix)->name('admin.')->middleware(['admin.locale', 'admin.
             $results[$i] = $row;
             $sess?->put('geo_cov_results', $results);
 
+            // 【本地修复】核查结果原来只活在 session 里，关浏览器就没了，历史报告无从谈起。
+            // 每跑完一题，把这一题产生的 run 挂到批次上（漏了历史报告就少数据），
+            // 再把计数同步一次：即使用户中途关闭页面，下拉里也能看到跑到哪、多少条有效。
+            $batchId = (int) ($ctx['batch_id'] ?? 0);
+            if ($batchId > 0) {
+                \App\Support\GeoAudit\GeoCoverageCheck::attachRuns($batchId, (array) ($row['run_ids'] ?? []));
+                $done = count(array_intersect(array_keys($qs), array_keys($results)));
+                \App\Support\GeoAudit\GeoCoverageCheck::syncBatch(
+                    $batchId,
+                    $done >= count($qs) ? 'completed' : 'running'
+                );
+            }
+
             return response()->json(array_merge($row, ['i' => $i]));
         }
 
@@ -1448,6 +1640,9 @@ Route::prefix($adminPrefix)->name('admin.')->middleware(['admin.locale', 'admin.
             // 单一来源：GeoCoverageReport::todoList()，两边都调它，不再各写一份排序逻辑。
             // 第二个参数是当前品牌：用来把题面回 keywords 表判类别，把 A 类挡在内容任务外面。
             $coverageBrand = (string) ($ctx['brand'] ?? '');
+            // 【本地修复】回报告页的链接必须带上「这次核查的品牌」，
+            // 否则报告页只能按 cookie 解析品牌，跑完 A 品牌却看到 B 品牌的分块卡。
+            $coverageBrandSlug = \App\Support\GeoAudit\GeoCoverageReport::coverageBrandSlug($ctx);
             $todo = \App\Support\GeoAudit\GeoCoverageReport::todoList($results, $coverageBrand);
 
             // ---- picked 解析：只认纯数字索引，all 表示全选 ----
@@ -1540,7 +1735,7 @@ Route::prefix($adminPrefix)->name('admin.')->middleware(['admin.locale', 'admin.
                         : '')
                     .$hint
                     .'<p class="g-cap">请回报告页勾选要生成内容的待补问题。</p>'
-                    .'<a class="g-btn g-btn--primary" href="'.$adminBase.'/coverage-check?report=1">返回核查报告</a></div>', '生成任务草稿');
+                    .'<a class="g-btn g-btn--primary" href="'.$adminBase.'/coverage-check?report=1&brand='.rawurlencode($coverageBrandSlug).'">返回核查报告</a></div>', '生成任务草稿');
             }
 
             // 部分 token 被丢弃时必须说清楚，否则用户"选了 3 题怎么只建了 2 题"无从得知。
@@ -1592,9 +1787,40 @@ Route::prefix($adminPrefix)->name('admin.')->middleware(['admin.locale', 'admin.
             $ctx = (array) ($sess?->get('geo_cov_ctx') ?? []);
             $qs = (array) ($sess?->get('geo_cov_questions') ?? []);
             $results = (array) ($sess?->get('geo_cov_results') ?? []);
+
+            // 【本地修复】?batch=<id> 指定看哪一批（报告页顶部下拉）。
+            // 只影响"统计范围"，不影响品牌：品牌仍然走 ?brand= → cookie → default。
+            $batchId = (int) ($request->query('batch') ?? 0);
+
             if ($ctx === [] || $qs === []) {
+                // 会话已过期，但指定了历史批次 → 从留档里重建这一批的报告。
+                // 没有这条兜底，历史下拉就成了摆设：点开永远是"会话已过期"。
+                if ($batchId > 0) {
+                    $historical = \App\Support\GeoAudit\GeoCoverageReport::historicalReportPage($batchId, $adminBase);
+                    if ($historical !== null) {
+                        return $toolView($historical, '覆盖核查报告');
+                    }
+
+                    return $toolView(\App\Support\GeoAudit\GeoCoverageReport::formPage(
+                        [],
+                        [],
+                        '找不到 batch='.$batchId.' 这一次核查记录（批次不存在），请重新发起核查'
+                    ), '覆盖核查');
+                }
+
                 return $toolView(\App\Support\GeoAudit\GeoCoverageReport::formPage([], [], '会话已过期，请重新发起核查'), '覆盖核查');
             }
+
+            // 批次跑完了但最后一次 syncBatch 可能没到（用户直接点「查看报告」跳过最后一题）
+            // → 进报告页时再同步一次，别让下拉一直显示"进行中"。
+            $ctxBatchId = (int) ($ctx['batch_id'] ?? 0);
+            if ($ctxBatchId > 0) {
+                \App\Support\GeoAudit\GeoCoverageCheck::syncBatch(
+                    $ctxBatchId,
+                    count(array_intersect(array_keys($qs), array_keys($results))) >= count($qs) ? 'completed' : 'running'
+                );
+            }
+
             // 有题没跑（中途关页面/刷新）→ 补一条"未核查"记录，
             // 不能直接忽略：否则报告里的"核查题数"会小于用户以为跑过的题数，属于误导。
             $rows = [];
@@ -1607,7 +1833,15 @@ Route::prefix($adminPrefix)->name('admin.')->middleware(['admin.locale', 'admin.
             }
             ksort($rows);
 
-            return $toolView(\App\Support\GeoAudit\GeoCoverageReport::reportPage($ctx, array_values($rows), $adminBase), '覆盖核查报告');
+            return $toolView(
+                \App\Support\GeoAudit\GeoCoverageReport::reportPage(
+                    $ctx,
+                    array_values($rows),
+                    $adminBase,
+                    $batchId > 0 ? $batchId : null
+                ),
+                '覆盖核查报告'
+            );
         }
 
         // ---------- ④ 发起核查：整理清单 ----------
@@ -1617,30 +1851,42 @@ Route::prefix($adminPrefix)->name('admin.')->middleware(['admin.locale', 'admin.
             'competitors' => (string) ($request->query('competitors') ?? ''),
             'questions' => (string) ($request->query('questions') ?? ''),
             'lib' => (int) ($request->query('lib') ?? 0),
-            'limit' => (int) ($request->query('limit') ?? 12),
+            // 【本地修复】原来这里读 limit（表单给 6/12/20 三选一）。
+            // 题数下拉已删除，不再有 limit 参数：本次核查题数 = 词库全部题 + 手填题。
             'rounds' => (int) ($request->query('rounds') ?? 3),
         ];
-        $libraries = \Illuminate\Support\Facades\DB::table('keyword_libraries')
-            ->orderBy('id')
-            ->get(['id', 'name'])
-            ->all();
+          // 【本地修复】原来只取 id/name，导致表单页词库下拉的「N 词」永远显示 0。
+          // keyword_count 是词库表自带字段（建库/导入时维护），这里一并取出即可。
+          $libraries = \Illuminate\Support\Facades\DB::table('keyword_libraries')
+              ->orderBy('id')
+              ->get(['id', 'name', 'keyword_count'])
+              ->all();
 
-        if ((string) $request->query('plan', '') !== '1') {
-            return $toolView(\App\Support\GeoAudit\GeoCoverageReport::formPage($old, $libraries), '覆盖核查');
-        }
+          if ((string) $request->query('plan', '') !== '1') {
+              return $toolView(\App\Support\GeoAudit\GeoCoverageReport::formPage($old, $libraries), '覆盖核查');
+          }
 
         $brands = \App\Support\GeoAudit\GeoCoverageCheck::parseList($old['brand']);
         if ($brands === []) {
             return $toolView(\App\Support\GeoAudit\GeoCoverageReport::formPage($old, $libraries, '请填写品牌或产品名'), '覆盖核查');
         }
 
-        // 检索层必须知道「哪个域名算你自己的」，否则无法认领推荐位
+        // 检索层必须知道「哪个域名算你自己的」，否则无法认领推荐位。
+        // 【本地扩展】例外：品牌档案里 has_site=false 的品牌（无官网）本来就没有自有站点，
+        // 不能再拿"请填自有站点 URL"把核查堵死在表单页 —— 让它照跑，
+        // 只是这一批的结论里不会有"自有页面"这一类（报告页的无官网口径下一批做）。
         $domain = \App\Support\GeoAudit\GeoCoverageCheck::domainOf($old['url']);
         if (($domain['keys'] ?? []) === []) {
-            return $toolView(\App\Support\GeoAudit\GeoCoverageReport::formPage($old, $libraries, '请填写自有站点 URL（例如 https://www.binsis.cn/），否则无法判断推荐位里哪条是你的'), '覆盖核查');
+            $coverageBrandRow = $old['brand'] !== ''
+                ? \App\Support\GeoAudit\GeoShareOfVoice::findBrand($old['brand'])
+                : null;
+            $coverageHasSite = \App\Support\GeoAudit\GeoShareOfVoice::hasSite($coverageBrandRow);
+
+            if ($coverageHasSite) {
+                return $toolView(\App\Support\GeoAudit\GeoCoverageReport::formPage($old, $libraries, '请填写自有站点 URL（例如 https://www.binsis.cn/），否则无法判断推荐位里哪条是你的'), '覆盖核查');
+            }
         }
 
-        $limit = max(4, min(20, (int) $old['limit']));
         $raw = [];
 
         // 词库取词：问句优先（覆盖核查要的是"用户会怎么问"，不是词根）
@@ -1671,9 +1917,24 @@ Route::prefix($adminPrefix)->name('admin.')->middleware(['admin.locale', 'admin.
             $raw[] = $line;
         }
 
-        $questions = array_slice(\App\Support\GeoAudit\GeoCoverageCheck::normalizeQuestions($raw), 0, $limit);
+        // 【本地修复】原来这里 array_slice(..., 0, $limit) 把题目截断到下拉里选的 6/12/20 题。
+        // 79 题的词库一次只跑 20 题，剩下 59 题永远没有结论 —— 核查结果天然是缺的。
+        // 现在跑全部题（词库全部 + 手填叠加），只保留一个防误操作的上限。
+        $questions = \App\Support\GeoAudit\GeoCoverageCheck::normalizeQuestions($raw);
         if ($questions === []) {
             return $toolView(\App\Support\GeoAudit\GeoCoverageReport::formPage($old, $libraries, '没有可核查的问题：请选一个关键词库，或在下面手填问题'), '覆盖核查');
+        }
+
+        // 上限保护不静默截断：截断会让用户以为"都跑过了"，而报告里题数又对不上。
+        // 超过就直接回表单页报错，让他先拆批次。
+        $coverageMax = (int) COVERAGE_MAX_QUESTIONS;
+        if (count($questions) > $coverageMax) {
+            return $toolView(\App\Support\GeoAudit\GeoCoverageReport::formPage(
+                $old,
+                $libraries,
+                '本次有 '.count($questions).' 题，超过单次上限 '.$coverageMax.' 题，没有提交。'
+                .'请分批跑：先按词库维度拆（换一个更小的词库），或先只填一部分手填问题。'
+            ), '覆盖核查');
         }
 
         $ctx = [
@@ -1684,6 +1945,15 @@ Route::prefix($adminPrefix)->name('admin.')->middleware(['admin.locale', 'admin.
             'rounds' => in_array((int) $old['rounds'], [1, 3, 5], true) ? (int) $old['rounds'] : 3,
             'competitors' => \App\Support\GeoAudit\GeoCoverageCheck::parseList($old['competitors']),
         ];
+
+        // 【本地修复】原来核查结果只存 session，关浏览器 / 超过 2 小时就丢，历史报告无从谈起。
+        // 建批次记录，把这次的品牌 / 题数 / 采样次数 / 官网状态快照下来，
+        // 逐题跑的时候再把每题的 run 挂进来（见 ① 逐题核查那一支）。
+        $batchId = \App\Support\GeoAudit\GeoCoverageCheck::createBatch($ctx, count($questions));
+        if ($batchId > 0) {
+            $ctx['batch_id'] = $batchId;
+        }
+
         $sess?->put('geo_cov_ctx', $ctx);
         $sess?->put('geo_cov_questions', $questions);
         $sess?->put('geo_cov_results', []);

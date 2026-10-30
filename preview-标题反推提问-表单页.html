@@ -1,0 +1,805 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="DXEy482w21WG5OW80MqWJle4P3JL7GQLsYFCF6Qb">
+    <meta name="application-name" content="GEOFlow">
+<meta name="theme-color" content="#ffffff">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="icon" type="image/svg+xml" href="/icons/geoflow-app.svg">
+<link rel="apple-touch-icon" sizes="192x192" href="/icons/geoflow-app-192.png">
+        <title>标题反推提问 · GEOFlow</title>
+            <script data-gf-sidebar-bootstrap>
+            (() => {
+                const root = document.documentElement;
+                root.setAttribute('data-gf-ui-booting', '');
+                let sidebarState = 'expanded';
+                let sidebarWidth = 256;
+                try {
+                    sidebarState = window.localStorage.getItem('geoflow.admin.ui-v3.sidebar-collapsed') === '1'
+                        ? 'collapsed'
+                        : 'expanded';
+                    const storedWidth = Number.parseFloat(window.localStorage.getItem('geoflow.admin.ui-v3.sidebar-width'));
+                    if (Number.isFinite(storedWidth)) sidebarWidth = Math.round(Math.min(384, Math.max(224, storedWidth)));
+                } catch {
+                    sidebarState = 'expanded';
+                    sidebarWidth = 256;
+                }
+                root.setAttribute('data-gf-sidebar-state', sidebarState);
+                root.style.setProperty('--gf-sidebar-width-value', `${sidebarWidth}px`);
+            })();
+        </script>
+        <script type="application/json" id="geoflow-runtime-config">{"adminBasePath":"/geo_admin","reverb":{"enabled":true,"key":"geoflow-reverb-key","host":"localhost","port":18080,"scheme":"http","path":"/reverb","authEndpoint":"/broadcasting/auth"},"copySuccess":"地址已复制","copyFailed":"复制失败，请手动复制地址"}</script>
+        <link rel="preload" as="style" href="http://localhost/build/assets/app-at4Sj1M8.css" /><link rel="preload" as="style" href="http://localhost/build/assets/app-Hd-SM8-N.css" /><link rel="modulepreload" as="script" href="http://localhost/build/assets/app-9uh6JOO9.js" /><link rel="modulepreload" as="script" href="http://localhost/build/assets/pwa-njVn71ip.js" /><link rel="stylesheet" href="http://localhost/build/assets/app-at4Sj1M8.css" /><link rel="stylesheet" href="http://localhost/build/assets/app-Hd-SM8-N.css" /><script type="module" src="http://localhost/build/assets/app-9uh6JOO9.js"></script>        <script src="http://localhost/js/lucide.min.js" data-lucide-runtime defer></script>
+    </head>
+    <body class="gf-admin-v3 ">
+        <a class="gf-skip-link" href="#main-content">跳到主要内容</a>
+        <div class="gf-shell" data-gf-shell>
+            <button class="gf-sidebar-overlay" type="button" aria-label="关闭公共菜单栏" data-sidebar-close></button>
+            <aside class="gf-sidebar" aria-label="公共菜单栏">
+    <div
+        class="gf-sidebar__resize-handle"
+        role="separator"
+        tabindex="0"
+        aria-label="调整公共菜单栏宽度"
+        aria-orientation="vertical"
+        aria-valuemin="224"
+        aria-valuemax="384"
+        aria-valuenow="256"
+        data-sidebar-resize
+    ></div>
+    <div class="gf-sidebar__brand">
+        <a class="gf-wordmark" href="/geo_admin/dashboard">GEOFlow</a>
+        <button class="gf-icon-button" type="button" aria-label="收起公共菜单栏" aria-expanded="true" data-sidebar-collapse><i data-lucide="panel-left-close"></i></button>
+        <button class="gf-icon-button gf-mobile-only" type="button" aria-label="关闭公共菜单栏" data-sidebar-close><i data-lucide="x"></i></button>
+    </div>
+    <nav class="gf-sidebar__nav" aria-label="后台功能导航">
+        <div class="gf-sidebar__primary">
+                            <section class="gf-sidebar__group">
+                                        <div class="gf-sidebar__items">
+                                                    <a class="gf-sidebar__link" href="/geo_admin/ai-workspace" title="AI 工作台" >
+                                <i data-lucide="sparkles"></i><span>AI 工作台</span>
+                            </a>
+                                                    <a class="gf-sidebar__link" href="/geo_admin/geo-audit" title="官网诊断" >
+                                <i data-lucide="radar"></i><span>官网诊断</span>
+                            </a>
+                                                    <a class="gf-sidebar__link" href="/geo_admin/coverage-check" title="覆盖核查" >
+                                <i data-lucide="target"></i><span>覆盖核查</span>
+                            </a>
+                                                    <a class="gf-sidebar__link" href="/geo_admin/share-of-voice" title="声量对标" >
+                                <i data-lucide="scale"></i><span>声量对标</span>
+                            </a>
+                                                    <a class="gf-sidebar__link" href="/geo_admin/geo-plan" title="GEO 方案" >
+                                <i data-lucide="list-checks"></i><span>GEO 方案</span>
+                            </a>
+                                                    <a class="gf-sidebar__link" href="/geo_admin/publish-track" title="发布追踪" >
+                                <i data-lucide="send"></i><span>发布追踪</span>
+                            </a>
+                                            </div>
+                </section>
+                            <section class="gf-sidebar__group">
+                    <h2 class="gf-sidebar__heading">数据</h2>                    <div class="gf-sidebar__items">
+                                                    <a class="gf-sidebar__link" href="/geo_admin/analytics" title="数据中心" >
+                                <i data-lucide="chart-no-axes-combined"></i><span>数据中心</span>
+                            </a>
+                                            </div>
+                </section>
+                            <section class="gf-sidebar__group">
+                    <h2 class="gf-sidebar__heading">内容</h2>                    <div class="gf-sidebar__items">
+                                                    <a class="gf-sidebar__link" href="/geo_admin/materials" title="内容资产" >
+                                <i data-lucide="database"></i><span>内容资产</span>
+                            </a>
+                                                    <a class="gf-sidebar__link" href="/geo_admin/title-question" title="标题反推提问"  aria-current="page" >
+                                <i data-lucide="target"></i><span>标题反推提问</span>
+                            </a>
+                                                    <a class="gf-sidebar__link" href="/geo_admin/articles" title="内容工坊" >
+                                <i data-lucide="file-text"></i><span>内容工坊</span>
+                            </a>
+                                                    <a class="gf-sidebar__link" href="/geo_admin/tasks" title="任务管理" >
+                                <i data-lucide="workflow"></i><span>任务管理</span>
+                            </a>
+                                                    <a class="gf-sidebar__link" href="/geo_admin/citation-record" title="引用样本录入" >
+                                <i data-lucide="clipboard-list"></i><span>引用样本录入</span>
+                            </a>
+                                            </div>
+                </section>
+                            <section class="gf-sidebar__group">
+                    <h2 class="gf-sidebar__heading">系统</h2>                    <div class="gf-sidebar__items">
+                                                    <a class="gf-sidebar__link" href="/geo_admin/ai-configurator" title="AI配置器" >
+                                <i data-lucide="network"></i><span>AI配置器</span>
+                            </a>
+                                                    <a class="gf-sidebar__link" href="/geo_admin/site-settings" title="网站设置" >
+                                <i data-lucide="settings"></i><span>网站设置</span>
+                            </a>
+                                            </div>
+                </section>
+                    </div>
+        <section
+            class="gf-sidebar__recent"
+            data-sidebar-recent
+            data-recent-url="/geo_admin/recent"
+            data-recent-empty="访问页面后会显示在这里"
+            data-recent-loading="正在加载更多记录"
+            data-recent-load-failed="聊天记录暂时无法加载"
+            data-recent-retry="重新加载"
+            data-archive-label="归档"
+        >
+            <div class="gf-sidebar__recent-head">
+                <h2 class="gf-sidebar__heading">
+                    <button type="button" aria-expanded="true" aria-controls="gf-sidebar-recent-body" data-sidebar-recent-toggle>
+                        <span>最近</span><i data-lucide="chevron-down" aria-hidden="true"></i>
+                    </button>
+                </h2>
+                <div class="gf-sidebar__recent-actions">
+                                            <a class="gf-icon-button gf-icon-button--small" href="/geo_admin/ai-workspace" aria-label="新建对话"><i data-lucide="square-pen"></i></a>
+                                    </div>
+            </div>
+            <div class="gf-sidebar__recent-body" id="gf-sidebar-recent-body" data-sidebar-recent-body>
+                <div class="gf-sidebar__recent-scroll" data-sidebar-recent-scroll>
+                    <div class="gf-sidebar__items gf-ai-history__list" data-sidebar-recent-list data-ai-history-list aria-live="polite"></div>
+                    <p class="gf-sidebar__empty" data-sidebar-recent-status hidden>访问页面后会显示在这里</p>
+                    <button class="gf-sidebar__recent-retry" type="button" data-sidebar-recent-retry hidden>重新加载</button>
+                </div>
+            </div>
+        </section>
+    </nav>
+    <div class="gf-sidebar__account-bar" aria-label="账户与系统快捷入口">
+        <button class="gf-sidebar__account" type="button" data-dialog-open="account" aria-label="打开 Administrator 的账户信息">
+            <span class="gf-account-avatar">A</span><span class="gf-account-name">Administrator</span><i data-lucide="chevron-right"></i>
+        </button>
+        <button class="gf-icon-button gf-sidebar__utility" type="button" data-dialog-open="qr" aria-label="打开 GEOFlow 社区与作者微信" title="打开 GEOFlow 社区与作者微信"><i data-lucide="qr-code"></i></button>
+        <button class="gf-icon-button gf-sidebar__utility" type="button" data-dialog-open="quick-settings" aria-label="打开快捷设置"><i data-lucide="settings"></i></button>
+    </div>
+</aside>
+            <div class="gf-shell__body">
+                <header class="gf-topbar">
+    <button class="gf-icon-button gf-mobile-only" type="button" aria-label="打开公共菜单栏" data-sidebar-open><i data-lucide="menu"></i></button>
+        <div class="gf-topbar__actions">
+        <button class="gf-button gf-button--small gf-pwa-install" type="button" data-pwa-install hidden aria-label="安装 GEOFlow 工作台"><i data-lucide="app-window"></i><span>安装工作台</span></button>
+        <div class="gf-popover-wrap">
+                            <a
+                    class="gf-icon-button gf-icon-button--round"
+                    href="/geo_admin/system-updates"
+                    aria-label="更新中心"
+                    title="更新中心"
+                    data-system-update-link
+                ><i data-lucide="bell"></i><span class="gf-notification-dot" data-update-indicator></span></a>
+                    </div>
+        <div class="gf-popover-wrap gf-language-wrap">
+            <button
+                class="gf-language"
+                type="button"
+                aria-label="界面语言: 简体中文"
+                data-popover-button="language"
+            >
+                <i data-lucide="languages"></i>
+                <span class="gf-language__label" lang="zh-CN">简体中文</span>
+                <i class="gf-language__chevron" data-lucide="chevron-down"></i>
+            </button>
+            <div class="gf-popover gf-popover--language" data-popover="language" hidden>
+                <span class="gf-language-menu__label" id="gf-language-menu-label">界面语言</span>
+                <div class="gf-language-list" aria-labelledby="gf-language-menu-label">
+                                                                    <a
+                            class="gf-language-option is-current"
+                            href="/geo_admin/locale/zh_CN"
+                            lang="zh-CN"
+                            hreflang="zh-CN"
+                            aria-label="切换为 简体中文"
+                             aria-current="true"                         >
+                            <span class="gf-language-option__code">ZH</span>
+                            <span>简体中文</span>
+                            <i data-lucide="check"></i>
+                        </a>
+                                                                    <a
+                            class="gf-language-option"
+                            href="/geo_admin/locale/zh_TW"
+                            lang="zh-TW"
+                            hreflang="zh-TW"
+                            aria-label="切换为 繁體中文"
+                                                    >
+                            <span class="gf-language-option__code">繁</span>
+                            <span>繁體中文</span>
+                            <i data-lucide="check"></i>
+                        </a>
+                                                                    <a
+                            class="gf-language-option"
+                            href="/geo_admin/locale/en"
+                            lang="en"
+                            hreflang="en"
+                            aria-label="切换为 English"
+                                                    >
+                            <span class="gf-language-option__code">EN</span>
+                            <span>English</span>
+                            <i data-lucide="check"></i>
+                        </a>
+                                                                    <a
+                            class="gf-language-option"
+                            href="/geo_admin/locale/ja"
+                            lang="ja"
+                            hreflang="ja"
+                            aria-label="切换为 日本語"
+                                                    >
+                            <span class="gf-language-option__code">JA</span>
+                            <span>日本語</span>
+                            <i data-lucide="check"></i>
+                        </a>
+                                                                    <a
+                            class="gf-language-option"
+                            href="/geo_admin/locale/es"
+                            lang="es"
+                            hreflang="es"
+                            aria-label="切换为 Español"
+                                                    >
+                            <span class="gf-language-option__code">ES</span>
+                            <span>Español</span>
+                            <i data-lucide="check"></i>
+                        </a>
+                                                                    <a
+                            class="gf-language-option"
+                            href="/geo_admin/locale/ru"
+                            lang="ru"
+                            hreflang="ru"
+                            aria-label="切换为 Русский"
+                                                    >
+                            <span class="gf-language-option__code">RU</span>
+                            <span>Русский</span>
+                            <i data-lucide="check"></i>
+                        </a>
+                                                                    <a
+                            class="gf-language-option"
+                            href="/geo_admin/locale/pt_BR"
+                            lang="pt-BR"
+                            hreflang="pt-BR"
+                            aria-label="切换为 Português (BR)"
+                                                    >
+                            <span class="gf-language-option__code">PT</span>
+                            <span>Português (BR)</span>
+                            <i data-lucide="check"></i>
+                        </a>
+                                    </div>
+            </div>
+        </div>
+        <div class="gf-popover-wrap">
+            <button class="gf-user-button" type="button" aria-label="打开用户菜单" data-popover-button="user"><span class="gf-user-avatar"><i data-lucide="user"></i></span><i data-lucide="chevron-down"></i></button>
+            <div class="gf-popover gf-popover--user" data-popover="user" hidden>
+                <strong>Administrator</strong><span>超级管理员</span>
+                <a href="/geo_admin/account">账户与权限</a>
+                <a href="/geo_admin/site-settings">网站设置</a>
+                <form method="POST" action="/geo_admin/logout" data-no-unsaved><input type="hidden" name="_token" value="DXEy482w21WG5OW80MqWJle4P3JL7GQLsYFCF6Qb" autocomplete="off"><button type="submit" class="gf-popover__danger">退出登录</button></form>
+            </div>
+        </div>
+    </div>
+</header>
+                <main class="gf-main" id="main-content">
+                                                            <div class="gf-content" data-gf-page-heading="content">
+                                                    
+    <style>.geo-ui{
+  --g-brand:#4f46e5;--g-brand-2:#7c3aed;--g-brand-weak:#eef2ff;--g-brand-line:#e0e7ff;
+  --g-txt:#111827;--g-txt-2:#374151;--g-muted:#6b7280;
+  --g-bg:#f7f8fa;--g-card:#ffffff;--g-line:#e5e7eb;--g-line-2:#eef0f3;
+  --g-ok:#10b981;--g-ok-bg:#ecfdf5;--g-ok-txt:#047857;
+  --g-warn:#f59e0b;--g-warn-bg:#fffbeb;--g-warn-txt:#b45309;
+  --g-bad:#ef4444;--g-bad-bg:#fef2f2;--g-bad-txt:#b91c1c;
+  --g-r-lg:16px;--g-r-md:11px;--g-r-sm:9px;
+  --g-sp-1:6px;--g-sp-2:10px;--g-sp-3:14px;--g-sp-4:20px;--g-sp-5:28px;
+  --g-shadow:0 1px 2px rgba(16,24,40,.04);
+  --g-font:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
+}
+
+/* ---------- 通用组件 ---------- */
+.geo-ui .g-card{background:var(--g-card);border:1px solid var(--g-line);border-radius:var(--g-r-lg);padding:var(--g-sp-4) 24px;margin-bottom:var(--g-sp-3);box-shadow:var(--g-shadow)}
+.geo-ui .g-card>h3{margin:0 0 4px;font-size:15px;font-weight:650;color:var(--g-txt)}
+.geo-ui .g-cap{margin:0 0 var(--g-sp-3);font-size:12px;color:var(--g-muted)}
+
+.geo-ui .g-row{display:flex;gap:var(--g-sp-2);flex-wrap:wrap;align-items:center}
+.geo-ui .g-toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;background:var(--g-card);border:1px solid var(--g-line);border-radius:var(--g-r-md);padding:10px 14px;margin-bottom:var(--g-sp-3)}
+.geo-ui .g-toolbar .g-sep{font-size:12px;color:var(--g-muted);margin-left:4px}
+
+.geo-ui .g-btn{display:inline-flex;align-items:center;gap:6px;text-decoration:none;cursor:pointer;border:0;
+  border-radius:var(--g-r-sm);font-weight:650;font-size:13px;padding:9px 15px;line-height:1.2}
+.geo-ui .g-btn--primary{color:#fff;background:linear-gradient(135deg,var(--g-brand),var(--g-brand-2))}
+.geo-ui .g-btn--primary:hover{filter:brightness(1.07)}
+.geo-ui .g-btn--ghost{color:var(--g-txt);background:#f3f4f6;border:1px solid #d1d5db}
+.geo-ui .g-btn--ghost:hover{background:#e5e7eb}
+.geo-ui .g-btn--soft{color:var(--g-brand);background:var(--g-brand-weak);border:1px solid var(--g-brand-line)}
+.geo-ui .g-btn--soft:hover{background:#e6ecff}
+.geo-ui .g-btn[disabled]{cursor:progress;opacity:.6;pointer-events:none}
+
+.geo-ui .g-tag{display:inline-block;font-size:11.5px;color:var(--g-muted);background:#f3f4f6;border-radius:99px;padding:3px 10px}
+.geo-ui .g-badge{display:inline-block;font-size:11.5px;font-weight:700;color:#fff;background:linear-gradient(135deg,var(--g-brand),var(--g-brand-2));border-radius:99px;padding:3px 10px}
+.geo-ui .g-pill{display:inline-block;padding:4px 12px;border-radius:99px;font-size:12px;font-weight:700}
+.geo-ui .g-pill--ok{background:var(--g-ok-bg);color:var(--g-ok-txt)}
+.geo-ui .g-pill--warn{background:var(--g-warn-bg);color:var(--g-warn-txt)}
+.geo-ui .g-pill--bad{background:var(--g-bad-bg);color:var(--g-bad-txt)}
+
+.geo-ui .g-err{background:var(--g-bad-bg);border:1px solid #fecaca;color:#991b1b;border-radius:var(--g-r-md);padding:12px 14px;font-size:13px;margin-bottom:var(--g-sp-3)}
+.geo-ui .g-note{background:var(--g-ok-bg);border:1px solid #a7f3d0;color:#065f46;border-radius:var(--g-r-md);padding:11px 14px;font-size:12.5px;margin-bottom:var(--g-sp-3)}
+
+/* 全屏执行遮罩（统一） */
+.geo-busy{position:fixed;inset:0;background:rgba(17,24,39,.42);z-index:99999;display:none;align-items:center;justify-content:center;backdrop-filter:blur(2px)}
+.geo-busy.is-on{display:flex}
+.geo-busy .box{background:#fff;border-radius:18px;padding:26px 32px;text-align:center;box-shadow:0 16px 48px rgba(0,0,0,.20);max-width:360px;border:1px solid rgba(255,255,255,.6)}
+.geo-busy .sp{width:32px;height:32px;margin:0 auto 14px;border:3px solid #e0e7ff;border-top-color:#4f46e5;border-radius:50%;animation:geoBusySpin .8s linear infinite}
+.geo-busy b{display:block;font-size:15px;color:#111827;margin-bottom:6px}
+.geo-busy span{font-size:12.5px;color:#6b7280;line-height:1.6}
+@keyframes geoBusySpin{to{transform:rotate(360deg)}}
+
+/* Markdown 正文统一排版 */
+.geo-ui .g-md{font-size:14px;line-height:1.78;color:var(--g-txt)}
+.geo-ui .g-md h2{font-size:19px;margin:22px 0 10px;padding-bottom:6px;border-bottom:1px solid var(--g-line-2)}
+.geo-ui .g-md h3{font-size:16px;margin:18px 0 8px}
+.geo-ui .g-md h4{font-size:14.5px;margin:14px 0 6px;color:var(--g-txt-2)}
+.geo-ui .g-md table{width:100%;border-collapse:collapse;margin:12px 0;font-size:12.5px}
+.geo-ui .g-md th,.geo-ui .g-md td{border:1px solid var(--g-line);padding:8px 10px;text-align:left;vertical-align:top}
+.geo-ui .g-md th{background:#f9fafb;font-weight:650}
+.geo-ui .g-md ul,.geo-ui .g-md ol{padding-left:20px;margin:10px 0}
+.geo-ui .g-md li{margin:4px 0}
+.geo-ui .g-md p{margin:10px 0}
+.geo-ui .g-md code{background:#f3f4f6;padding:1px 5px;border-radius:4px;font-size:12.5px}
+.geo-ui .g-md pre{background:#0f172a;color:#e5e7eb;padding:14px;border-radius:var(--g-r-md);overflow:auto;font-size:12.5px}
+.geo-ui .g-md blockquote{border-left:3px solid var(--g-brand-line);margin:12px 0;padding:2px 14px;color:#4b5563}
+
+/* 统一表格（历史/对比） */
+.geo-ui .g-table{width:100%;border-collapse:collapse;font-size:12.5px}
+.geo-ui .g-table th,.geo-ui .g-table td{border:1px solid var(--g-line);padding:9px 11px;text-align:left}
+.geo-ui .g-table th{background:#f9fafb;font-weight:650;color:var(--g-txt-2)}
+.geo-ui .g-up{color:var(--g-ok-txt);font-weight:700}
+.geo-ui .g-down{color:var(--g-bad-txt);font-weight:700}</style><div class="geo-ui" data-geo-title="标题反推提问" style="max-width:1240px;margin:0 auto;padding:4px 4px 48px;font:14px/1.7 var(--g-font);color:#111827"><div class="g-card"><h3>标题反推 AI 提问</h3><p class="g-cap">输入一个标题，得到「这个标题想抢哪些 AI 提问」的清单，用来给运营派活。<b>只做推导，不接引用可行性</b> —— AI 现在引用谁、抢位的是竞品还是媒体，那些在「覆盖核查」「声量对标」里看。</p><form method="post" action="/geo_admin/title-question/generate" id="tq-form"><input type="hidden" name="_token" value="DXEy482w21WG5OW80MqWJle4P3JL7GQLsYFCF6Qb"><input type="hidden" name="brand" value="binsis"><div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;margin-top:12px"><label style="flex:1;min-width:320px;display:block;font-size:12.5px;font-weight:600;color:#374151">标题原文<input type="text" name="title" required maxlength="200" value="" placeholder="例如：冰溪舒缓修护霜测评：烂脸期真的能用吗" style="width:100%;margin-top:6px;padding:10px 12px;border:1px solid #d1d5db;border-radius:10px;font-size:13.5px"></label><button type="submit" class="g-btn g-btn--primary" id="tq-submit">开始推导</button></div></form><p class="g-cap" style="margin:10px 0 0">一次会调用模型生成 10–12 条候选，再筛成 5–8 条主清单，通常 20–40 秒。同一标题重复跑会各自留一份批次，历史里能对比。</p><p class="g-cap" style="margin:6px 0 0">当前品牌：<b>冰溪</b>（切换品牌用页面顶部的品牌 chip）</p></div><div class="g-card"><h3>历史批次</h3><div style="display:flex;flex-direction:column;gap:8px"><div style="display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid #e5e7eb;border-radius:10px;background:#fff"><div style="flex:1;min-width:0"><div style="font-size:13.5px;font-weight:600;color:#111827;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">敏感肌护肤品怎么选</div><div class="g-cap" style="margin:2px 0 0">2026-10-30 19:57:36 · 共 5 次</div></div><span class="g-pill">5 次</span></div><div style="display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid #e5e7eb;border-radius:10px;background:#fff"><div style="flex:1;min-width:0"><div style="font-size:13.5px;font-weight:600;color:#111827;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">冰溪和薇诺娜修护霜哪个好</div><div class="g-cap" style="margin:2px 0 0">2026-10-30 19:57:24 · 共 5 次</div></div><span class="g-pill">5 次</span></div><div style="display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid #e5e7eb;border-radius:10px;background:#fff"><div style="flex:1;min-width:0"><div style="font-size:13.5px;font-weight:600;color:#111827;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">冰溪舒缓修护霜测评：烂脸期真的能用吗</div><div class="g-cap" style="margin:2px 0 0">2026-10-30 19:57:04 · 共 10 次</div></div><span class="g-pill">10 次</span></div><div style="display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid #e5e7eb;border-radius:10px;background:#fff"><div style="flex:1;min-width:0"><div style="font-size:13.5px;font-weight:600;color:#111827;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">2026 敏感肌修护霜推荐：薇诺娜、玉泽、冰溪怎么选</div><div class="g-cap" style="margin:2px 0 0">2026-10-30 19:42:22 · 共 1 次</div></div><span class="g-pill">1 次</span></div></div></div><div class="g-card"><h3>这份清单怎么用</h3><ol style="margin:0;padding-left:20px;font-size:12.5px;color:#4b5563;line-height:1.9"><li><b>主清单</b>是这篇能直接覆盖的问题，按「投入产出比」排序（S3b &gt; S3a &gt; S2 &gt; S5 &gt; S1 &gt; S4）</li><li><b>副清单</b>是「顺带能覆盖」的，默认折叠 —— 展开后会忍不住把它当目标写</li><li>每条都带<b>预期答案</b>和<b>内容类型</b>：前者是验收口径，后者决定派给谁写</li><li><b>转信源建设</b>的题不要写成软文，它们靠品牌词条/百科/资质页去抢</li></ol></div><script>(function(){var f=document.getElementById("tq-form");if(!f)return;f.addEventListener("submit",function(){var b=document.getElementById("tq-submit");if(b){b.disabled=true;b.style.opacity=".65";b.textContent="推导中…";}if(window.geoBusy){window.geoBusy("正在推导 AI 提问…","一次模型调用，通常 20–40 秒，请勿关闭页面");}});})();</script></div><div class="geo-busy" id="geo-busy"><div class="box"><div class="sp"></div><b id="geo-busy-title">处理中…</b><span id="geo-busy-desc">正在调用模型，请勿关闭页面</span></div></div><script>(function(){window.geoBusy=function(title,desc){var b=document.getElementById("geo-busy");if(!b)return;if(title){document.getElementById("geo-busy-title").textContent=title;}if(desc){document.getElementById("geo-busy-desc").textContent=desc;}b.classList.add("is-on");};})();</script>
+                    </div>
+                    <footer class="mt-auto shrink-0 border-t border-gray-200 bg-gray-50 text-xs leading-5 text-gray-500" data-admin-product-footer>
+    <div class="mx-auto flex min-h-[52px] max-w-7xl flex-col items-start justify-center gap-x-8 px-4 py-2 sm:px-6 lg:flex-row lg:items-center lg:justify-between lg:px-12">
+        <div class="flex flex-wrap items-center gap-x-2" aria-label="GEOFlow release information">
+            <a href="https://github.com/yaojingang/GEOFlow/releases" target="_blank" rel="noopener noreferrer" class="inline-flex min-h-10 touch-manipulation items-center rounded-sm text-gray-600 underline-offset-4 transition-[color,transform] duration-150 ease-out [@media(hover:hover)]:hover:text-blue-600 [@media(hover:hover)]:hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/30 active:scale-[0.96]">GEOFlow v3.1.0</a>
+            <span class="text-gray-300" aria-hidden="true">·</span>
+            <span>© 2026 Yao Jingang</span>
+            <span class="text-gray-300" aria-hidden="true">·</span>
+            <a href="https://github.com/yaojingang/GEOFlow/blob/main/LICENSE" target="_blank" rel="noopener noreferrer" class="inline-flex min-h-10 touch-manipulation items-center rounded-sm text-gray-600 underline-offset-4 transition-[color,transform] duration-150 ease-out [@media(hover:hover)]:hover:text-blue-600 [@media(hover:hover)]:hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/30 active:scale-[0.96]">AGPL-3.0</a>
+        </div>
+        <nav class="flex flex-wrap items-center gap-x-2" aria-label="GEOFlow project resources">
+            <a href="https://github.com/yaojingang/GEOFlow/blob/main/docs/CHANGELOG.md" target="_blank" rel="noopener noreferrer" class="inline-flex min-h-10 touch-manipulation items-center rounded-sm text-gray-600 underline-offset-4 transition-[color,transform] duration-150 ease-out [@media(hover:hover)]:hover:text-blue-600 [@media(hover:hover)]:hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/30 active:scale-[0.96]">更新日志</a>
+            <span class="text-gray-300" aria-hidden="true">·</span>
+            <a href="https://github.com/yaojingang/GEOFlow" target="_blank" rel="noopener noreferrer" class="inline-flex min-h-10 touch-manipulation items-center rounded-sm text-gray-600 underline-offset-4 transition-[color,transform] duration-150 ease-out [@media(hover:hover)]:hover:text-blue-600 [@media(hover:hover)]:hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/30 active:scale-[0.96]">项目GitHub地址</a>
+            <span class="text-gray-300" aria-hidden="true">·</span>
+            <a href="https://x.com/yaojingang" target="_blank" rel="noopener noreferrer" class="inline-flex min-h-10 touch-manipulation items-center rounded-sm text-gray-600 underline-offset-4 transition-[color,transform] duration-150 ease-out [@media(hover:hover)]:hover:text-blue-600 [@media(hover:hover)]:hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/30 active:scale-[0.96]">作者X主页</a>
+            <span class="text-gray-300" aria-hidden="true">·</span>
+            <a href="https://github.com/yaojingang/GEOFlow/wiki" target="_blank" rel="noopener noreferrer" class="inline-flex min-h-10 touch-manipulation items-center rounded-sm text-gray-600 underline-offset-4 transition-[color,transform] duration-150 ease-out [@media(hover:hover)]:hover:text-blue-600 [@media(hover:hover)]:hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/30 active:scale-[0.96]">帮助文档</a>
+            <span class="text-gray-300" aria-hidden="true">·</span>
+            <button type="button" data-open-admin-welcome class="border-0 bg-transparent p-0 inline-flex min-h-10 touch-manipulation items-center rounded-sm text-gray-600 underline-offset-4 transition-[color,transform] duration-150 ease-out [@media(hover:hover)]:hover:text-blue-600 [@media(hover:hover)]:hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/30 active:scale-[0.96]">
+                项目说明
+            </button>
+        </div>
+    </div>
+</footer>
+                </main>
+            </div>
+        </div>
+        <div class="gf-modal-backdrop" data-gf-modal="account" hidden>
+    <section class="gf-modal" role="dialog" aria-modal="true" aria-labelledby="gf-account-title">
+        <header class="gf-modal__header"><div><h2 id="gf-account-title">账户与权限</h2><p>当前登录账户与权限摘要</p></div><button class="gf-icon-button" type="button" data-dialog-close aria-label="关闭弹窗"><i data-lucide="x"></i></button></header>
+        <div class="gf-modal__body">
+            <div class="gf-account-summary"><span class="gf-account-avatar gf-account-avatar--large">A</span><div><strong>Administrator</strong><span>admin</span></div></div>
+            <dl class="gf-facts">
+                <div><dt>账户角色</dt><dd>超级管理员</dd></div>
+                <div><dt>账户状态</dt><dd>正常</dd></div>
+                <div><dt>最近登录</dt><dd>2026-10-27 11:36</dd></div>
+            </dl>
+        </div>
+        <footer class="gf-modal__footer"><span>敏感操作会记录到审计日志</span><a class="gf-button gf-button--primary" href="/geo_admin/account">管理账户</a></footer>
+    </section>
+</div>
+<div class="gf-modal-backdrop" data-gf-modal="qr" hidden>
+    <section class="gf-modal gf-modal--community" role="dialog" aria-modal="true" aria-labelledby="gf-qr-title" aria-describedby="gf-qr-subtitle">
+        <header class="gf-modal__header">
+            <div>
+                <span class="gf-modal__eyebrow">GEOFlow Community</span>
+                <h2 id="gf-qr-title">加入 GEOFlow 免费交流群</h2>
+                <p id="gf-qr-subtitle">添加作者姚金刚的微信，获取交流邀请</p>
+            </div>
+            <button class="gf-icon-button" type="button" data-dialog-close aria-label="关闭弹窗"><i data-lucide="x"></i></button>
+        </header>
+        <div class="gf-modal__body gf-community-dialog">
+            <figure class="gf-community-dialog__qr">
+                <div class="gf-community-dialog__qr-frame">
+                    <img
+                        src="http://localhost/assets/images/yao-jingang-wechat.jpg"
+                        width="888"
+                        height="1128"
+                        alt="作者姚金刚的个人微信二维码"
+                    >
+                </div>
+                <figcaption><i data-lucide="scan-line" aria-hidden="true"></i>使用微信扫码添加好友</figcaption>
+            </figure>
+            <div class="gf-community-dialog__content">
+                <div class="gf-community-dialog__intro">
+                    <span>作者 · 姚金刚</span>
+                    <h3>一起交流，让 GEOFlow 更好用</h3>
+                    <p>扫码添加微信后发送“GEOFlow”，即可加入免费交流群。欢迎分享使用心得、提出功能建议，也欢迎反馈遇到的问题。</p>
+                </div>
+                <nav class="gf-community-links" aria-label="项目与动态">
+                    <p>项目与动态</p>
+                    <a href="https://github.com/yaojingang/GEOFlow" target="_blank" rel="noopener noreferrer">
+                        <span class="gf-community-links__icon"><i data-lucide="git-fork" aria-hidden="true"></i></span>
+                        <span><strong>GitHub</strong><small>查看源码、提交 Issue 或参与贡献</small></span>
+                        <i data-lucide="arrow-up-right" aria-hidden="true"></i>
+                    </a>
+                    <a href="https://x.com/yaojingang" target="_blank" rel="noopener noreferrer">
+                        <span class="gf-community-links__icon gf-community-links__icon--x" aria-hidden="true">X</span>
+                        <span><strong>作者 X</strong><small>关注作者的产品与开源动态</small></span>
+                        <i data-lucide="arrow-up-right" aria-hidden="true"></i>
+                    </a>
+                </nav>
+            </div>
+        </div>
+        <footer class="gf-modal__footer gf-community-dialog__footer"><span><i data-lucide="message-circle-heart" aria-hidden="true"></i>欢迎交流使用心得、提出建议并反馈问题</span><button class="gf-button" type="button" data-dialog-close>关闭弹窗</button></footer>
+    </section>
+</div>
+<div class="gf-modal-backdrop" data-gf-modal="quick-settings" hidden>
+    <section class="gf-modal" role="dialog" aria-modal="true" aria-labelledby="gf-settings-title">
+        <header class="gf-modal__header"><div><h2 id="gf-settings-title">快捷设置</h2><p>进入常用的网站、账户和权限设置</p></div><button class="gf-icon-button" type="button" data-dialog-close aria-label="关闭弹窗"><i data-lucide="x"></i></button></header>
+        <div class="gf-modal__body"><div class="gf-shortcut-list">
+            <a href="/geo_admin/site-settings"><i data-lucide="settings"></i><span><strong>网站设置</strong><small>管理网站、主题、表单和安全配置</small></span><i data-lucide="chevron-right"></i></a>
+            <a href="/geo_admin/account"><i data-lucide="user-round-cog"></i><span><strong>账户与权限</strong><small>查看账户资料、权限并修改密码</small></span><i data-lucide="chevron-right"></i></a>
+                            <a href="/geo_admin/admin-users"><i data-lucide="users"></i><span><strong>用户管理</strong><small>管理后台账户、角色和启用状态</small></span><i data-lucide="chevron-right"></i></a>
+                <a href="/geo_admin/admin-activity-logs"><i data-lucide="clipboard-list"></i><span><strong>操作日志</strong><small>查看管理员操作与安全记录</small></span><i data-lucide="chevron-right"></i></a>
+                    </div></div>
+        <footer class="gf-modal__footer"><span>只展示当前账户有权限访问的入口</span><button class="gf-button" type="button" data-dialog-close>关闭弹窗</button></footer>
+    </section>
+</div>
+        <div class="admin-action-layer" data-admin-action-layer data-cancel-label="取消" data-close-label="关闭" data-confirm-label="确认" data-success-title="操作已完成" data-info-title="请注意" data-error-title="操作未完成" hidden>
+    <dialog
+        class="admin-action-dialog"
+        data-admin-action-dialog
+        role="alertdialog"
+        aria-modal="true"
+        aria-labelledby="admin-action-dialog-title"
+        aria-describedby="admin-action-dialog-message admin-action-dialog-guidance"
+    >
+        <div class="admin-action-dialog__surface">
+            <div class="admin-action-dialog__content">
+                <span class="admin-action-dialog__icon" data-admin-action-icon aria-hidden="true">
+                    <i data-lucide="circle-help" aria-hidden="true"></i>
+                </span>
+                <div class="admin-action-dialog__copy">
+                    <h2 id="admin-action-dialog-title" class="admin-action-dialog__title" data-admin-action-title tabindex="-1"></h2>
+                    <p id="admin-action-dialog-message" class="admin-action-dialog__message" data-admin-action-message></p>
+                    <p id="admin-action-dialog-guidance" class="admin-action-dialog__guidance" data-admin-action-guidance hidden></p>
+                    <div class="admin-action-dialog__field" data-admin-action-field hidden>
+                        <div data-admin-action-fields></div>
+                    </div>
+                </div>
+            </div>
+            <div class="admin-action-dialog__actions">
+                <button type="button" class="admin-action-button admin-action-button--secondary" data-admin-action-cancel></button>
+                <button type="button" class="admin-action-button admin-action-button--primary" data-admin-action-confirm></button>
+            </div>
+        </div>
+    </dialog>
+</div>
+
+<div class="admin-action-notice-region" data-admin-action-notice-region aria-live="polite" aria-atomic="true">
+    <section class="admin-action-notice" data-admin-action-notice role="status" hidden>
+        <span class="admin-action-notice__icon" data-admin-notice-icon aria-hidden="true">
+            <i data-lucide="circle-check" aria-hidden="true"></i>
+        </span>
+        <div class="admin-action-notice__copy">
+            <strong data-admin-notice-title></strong>
+            <p data-admin-notice-message></p>
+            <p data-admin-notice-guidance hidden></p>
+            <a data-admin-notice-action hidden></a>
+        </div>
+        <button type="button" class="admin-action-notice__close" data-admin-notice-close aria-label="关闭">
+            <i data-lucide="x" aria-hidden="true"></i>
+        </button>
+    </section>
+</div>
+
+        <style>
+        #admin-welcome-modal .admin-welcome-document {
+            --admin-welcome-title-size: 24px;
+            --admin-welcome-section-size: 16px;
+            --admin-welcome-body-size: 14px;
+            --admin-welcome-body-leading: 1.52;
+            --admin-welcome-ink: #141413;
+            --admin-welcome-body: #3d3d3a;
+            --admin-welcome-muted: #5e5d59;
+            --admin-welcome-brand: #1B365D;
+            --admin-welcome-border: #e8e5da;
+            max-width: 860px;
+            background: #ffffff;
+            color: var(--admin-welcome-body);
+            font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+        }
+
+        #admin-welcome-modal .admin-welcome-reader {
+            max-width: 640px;
+        }
+
+        #admin-welcome-title {
+            font-family: ui-serif, "Songti SC", "Noto Serif CJK SC", "Source Han Serif SC", Georgia, serif;
+            font-size: var(--admin-welcome-title-size);
+            font-weight: 500;
+            line-height: 1.22;
+            letter-spacing: 0;
+            color: var(--admin-welcome-ink);
+        }
+
+        #admin-welcome-subtitle {
+            margin-top: 12px;
+            border-left: 3px solid #1B365D;
+            padding-left: 14px;
+            color: var(--admin-welcome-muted);
+            font-size: var(--admin-welcome-body-size);
+            font-weight: 400;
+            line-height: var(--admin-welcome-body-leading);
+            letter-spacing: 0;
+        }
+
+        #admin-welcome-content {
+            margin-top: 24px;
+            color: var(--admin-welcome-body);
+            font-size: var(--admin-welcome-body-size);
+            font-weight: 400;
+            line-height: var(--admin-welcome-body-leading);
+            letter-spacing: 0;
+        }
+
+        #admin-welcome-content .admin-welcome-paragraph {
+            margin: 0;
+        }
+
+        #admin-welcome-content .admin-welcome-section-title {
+            margin: 18px 0 8px;
+            border-left: 3px solid #1B365D;
+            padding-left: 10px;
+            font-family: ui-serif, "Songti SC", "Noto Serif CJK SC", "Source Han Serif SC", Georgia, serif;
+            font-size: var(--admin-welcome-section-size);
+            font-weight: 500;
+            line-height: 1.28;
+            color: var(--admin-welcome-ink);
+            letter-spacing: 0;
+        }
+
+        #admin-welcome-content .admin-welcome-list {
+            display: grid;
+            gap: 7px;
+            margin: 0;
+            padding: 0;
+        }
+
+        #admin-welcome-content .admin-welcome-list-item {
+            display: flex;
+            gap: 10px;
+            align-items: flex-start;
+        }
+
+        #admin-welcome-content .admin-welcome-bullet {
+            width: 4px;
+            height: 4px;
+            margin-top: 8px;
+            flex-shrink: 0;
+            border-radius: 9999px;
+            background: var(--admin-welcome-brand);
+        }
+
+        #admin-welcome-modal .admin-welcome-meta-text {
+            font-size: 12px;
+            line-height: 1.45;
+        }
+    </style>
+
+    <div id="admin-welcome-modal" class="hidden fixed inset-0 z-[70]" role="dialog" aria-modal="true" aria-labelledby="admin-welcome-title" aria-describedby="admin-welcome-subtitle">
+        <div class="absolute inset-0 bg-[rgba(15,23,42,0.48)]" data-welcome-backdrop></div>
+        <div class="relative flex min-h-full items-center justify-center p-4 sm:p-6 lg:p-8">
+            <div data-kami-document data-welcome-dialog tabindex="-1" class="admin-welcome-document w-full overflow-hidden rounded-2xl border border-[#e8e5da] bg-white shadow-[0_24px_72px_rgba(15,23,42,0.28)] ring-1 ring-[#e8e5da]">
+                <div class="border-b border-[#e8e5da] bg-white px-5 py-3.5 sm:px-7">
+                    <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                        <div>
+                            <div id="admin-welcome-badge" class="admin-welcome-meta-text inline-flex rounded-full bg-[#EEF2F7] px-2.5 py-1 font-semibold text-[#1B365D]"></div>
+                        </div>
+                        <div class="flex items-center gap-2 self-start sm:self-auto">
+                            <button type="button" data-welcome-switch class="admin-welcome-meta-text min-h-10 rounded-full border border-[#d1cfc5] bg-white px-3 py-1.5 font-medium text-[#3d3d3a] hover:border-[#1B365D] hover:text-[#1B365D]"></button>
+                            <button type="button" data-welcome-close class="admin-welcome-meta-text min-h-10 rounded-full border border-[#d1cfc5] bg-white px-3 py-1.5 font-medium text-[#3d3d3a] hover:bg-[#f7f6f1]"></button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="max-h-[80vh] overflow-y-auto bg-white px-5 py-7 sm:px-7 sm:py-8">
+                    <article class="admin-welcome-reader mx-auto">
+                        <h2 id="admin-welcome-title"></h2>
+                        <p id="admin-welcome-subtitle"></p>
+                        <div id="admin-welcome-content" class="admin-welcome-document-body space-y-4"></div>
+                    </article>
+
+                    <div class="admin-welcome-reader mx-auto mt-7 border-t border-[#e8e5da] pt-4">
+                        <p id="admin-welcome-links-label" class="admin-welcome-meta-text text-[#5e5d59]"></p>
+                        <div class="mt-3 flex flex-wrap gap-2">
+                            <a id="admin-welcome-link-x" class="admin-welcome-meta-text inline-flex items-center rounded-full bg-[#EEF2F7] px-3 py-1.5 font-medium text-[#1B365D] ring-1 ring-[#d1cfc5] hover:bg-[#E4ECF5]" target="_blank" rel="noopener noreferrer"></a>
+                            <a id="admin-welcome-link-github" class="admin-welcome-meta-text inline-flex items-center rounded-full bg-[#EEF2F7] px-3 py-1.5 font-medium text-[#1B365D] ring-1 ring-[#d1cfc5] hover:bg-[#E4ECF5]" target="_blank" rel="noopener noreferrer"></a>
+                            <a id="admin-welcome-link-changelog" class="admin-welcome-meta-text inline-flex items-center rounded-full bg-[#EEF2F7] px-3 py-1.5 font-medium text-[#1B365D] ring-1 ring-[#d1cfc5] hover:bg-[#E4ECF5]" target="_blank" rel="noopener noreferrer"></a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="application/json" id="admin-welcome-payload">{"copy":{"zh-CN":{"meta":{"badge":"\u7248\u672c\u66f4\u65b0","switch_label":"English","close":"\u5173\u95ed","links_label":"\u5efa\u8bae\u5148\u67e5\u770b\u66f4\u65b0\u65e5\u5fd7\uff0c\u518d\u51b3\u5b9a\u662f\u5426\u73b0\u5728\u5347\u7ea7\u3002","author_link":"\u4f5c\u8005 X \u4e3b\u9875","github_link":"\u9879\u76ee GitHub","changelog_link":"\u66f4\u65b0\u65e5\u5fd7"},"letter":{"title":"GEOFlow \u6709\u65b0\u7248\u672c\u53ef\u66f4\u65b0","subtitle":"\u5f53\u524d\u7248\u672c v3.0\uff0c\u6700\u65b0\u7248\u672c v3.2.0-beta.2\u3002","blocks":[{"type":"paragraph","content":"GEOFlow v3.2.0-beta.2"},{"type":"paragraph","content":"GEOFlow 3.2.0-beta.2 \u65b0\u589e\u4e13\u9898\u7ba1\u7406\u4e0e AI \u4e13\u9898\u4efb\u52a1\u3001\u4e09\u79cd\u4e13\u9898\u9605\u8bfb\u5e03\u5c40\u548c\u7cbe\u7b80\u6a21\u677f\u5e93\uff0c\u8865\u5145 GEO \u53d1\u73b0\u6587\u4ef6\u3001\u6a21\u677f\u89c6\u9891\u652f\u6301\uff0c\u5e76\u4fee\u590d\u6587\u7ae0\u6279\u91cf\u64cd\u4f5c\u3001AI \u6309\u5206\u6570\u653e\u884c\u4e0e\u81ea\u52a8\u53d1\u5e03\u6d41\u7a0b\u3002"},{"type":"list","items":["\u5f53\u524d\u7248\u672c\uff1av3.0","\u6700\u65b0\u7248\u672c\uff1av3.2.0-beta.2","\u53d1\u5e03\u7c7b\u578b\uff1a\u529f\u80fd\u66f4\u65b0","\u53d1\u5e03\u65e5\u671f\uff1a\u6682\u672a\u6807\u6ce8"]},{"type":"paragraph","content":"\u672c\u9884\u89c8\u7248\u7528\u4e8e\u5f00\u53d1\u4e0e\u9694\u79bb\u6d4b\u8bd5\uff0c\u5c1a\u672a\u5b8c\u6210\u6b63\u5f0f\u7b7e\u540d\u5206\u53d1\u3001\u539f\u751f\u53cc\u67b6\u6784\u6062\u590d\u6f14\u7ec3\u6216\u751f\u4ea7\u90e8\u7f72\u9a8c\u6536\u3002\u914d\u5957\u4f7f\u7528 CLI 0.4.0-preview.2\u3001Skill 1.2.0-preview.2\uff0c\u4ee5\u53ca\u58f0\u660e\u517c\u5bb9\u672c Core \u5951\u7ea6\u7684 Updater \u6784\u5efa\u3002\u4ece beta.1 \u5347\u7ea7\u65b0\u589e 9 \u9879\u7ef4\u62a4\u6a21\u5f0f\u8fc1\u79fb\uff0c\u5347\u7ea7\u524d\u5907\u4efd\u6570\u636e\u5e93\u3001\u6a21\u677f\u4e0e\u914d\u7f6e\uff0c\u6392\u7a7a\u65e7 worker \u5e76\u6784\u5efa\u524d\u7aef\u8d44\u6e90\uff1b\u4f7f\u7528\u6a21\u677f\u89c6\u9891\u9700\u5b89\u88c5 ffprobe\u3002\u65e7\u8d28\u68c0\u62a5\u544a\u9700\u91cd\u65b0\u68c0\u67e5\uff0c\u5386\u53f2\u4fdd\u7559\u6587\u7ae0\u4e0d\u4f1a\u81ea\u52a8\u53d1\u5e03\uff1bAPI\/CLI \u521b\u5efa\u666e\u901a\u6587\u7ae0\u4efb\u52a1\u987b\u663e\u5f0f\u63d0\u4f9b need_review\u3002\u5df2\u53d7\u7ba1\u5b9e\u4f8b\u6062\u590d\u540e\u7ee7\u7eed\u4fdd\u6301\u6062\u590d\u9650\u5236\uff0c\u5148\u67e5\u8be2\u539f\u64cd\u4f5c\u6536\u636e\u5e76\u5b8c\u6210\u9010\u4e1a\u52a1\u5bf9\u8d26\uff1b\u54cd\u5e94\u4e0d\u786e\u5b9a\u65f6\u4e0d\u8981\u81ea\u52a8\u91cd\u53d1\u3002\u4e3b\u9898\u8349\u7a3f\u7f16\u8f91\u4e0e\u9884\u89c8\u5df2\u5f00\u653e\uff0c\u8fdc\u7a0b\u4e3b\u9898\u53d1\u5e03\u548c\u56de\u6eda\u4ecd\u5f85\u540e\u7eed\u7248\u672c\u3002\u751f\u4ea7\u73af\u5883\u7ee7\u7eed\u4f7f\u7528\u6700\u65b0\u7a33\u5b9a\u7248 3.1.0\u3002"}]}},"en":{"meta":{"badge":"Release Update","switch_label":"\u4e2d\u6587","close":"Close","links_label":"Review the changelog first, then decide when to upgrade.","author_link":"Author X Profile","github_link":"Project GitHub","changelog_link":"Changelog"},"letter":{"title":"A new GEOFlow version is available","subtitle":"Current version v3.0, latest version v3.2.0-beta.2.","blocks":[{"type":"paragraph","content":"GEOFlow v3.2.0-beta.2"},{"type":"paragraph","content":"GEOFlow 3.2.0-beta.2 adds topic management and AI topic tasks, three topic reading layouts, and an organized theme library, alongside GEO discovery files, theme video support, and fixes for article bulk actions, score-based AI quality approval, and automatic publication."},{"type":"list","items":["Current version: v3.0","Latest version: v3.2.0-beta.2","Release type: Feature update","Release date: Not specified"]},{"type":"paragraph","content":"This preview is for development and isolated testing. Official signed distribution, native dual-architecture recovery rehearsals, and production deployment acceptance remain pending. Use CLI 0.4.0-preview.2, Skill 1.2.0-preview.2, and an Updater build declaring compatibility with this Core contract. Upgrading from beta.1 adds nine maintenance-mode migrations: back up the database, themes, and configuration, drain old workers, and build frontend assets. Theme video support requires ffprobe. Recheck older AI quality reports; existing held articles stay held. API\/CLI creation of article tasks requires an explicit need_review field. Keep managed instances held after recovery, query the original operation receipt, and reconcile each business domain; do not automatically resend uncertain requests. Theme draft editing and preview are available; remote theme publication and rollback remain pending. Production environments should continue using stable 3.1.0."}]}}},"state":{"mode":"update","shouldAutoOpen":false,"dismissUrl":"\/geo_admin\/welcome\/dismiss","csrfToken":"DXEy482w21WG5OW80MqWJle4P3JL7GQLsYFCF6Qb","links":{"x":"https:\/\/x.com\/yaojingang","github":"https:\/\/github.com\/yaojingang\/GEOFlow","changelog":{"zh-CN":"https:\/\/github.com\/yaojingang\/GEOFlow\/blob\/main\/docs\/CHANGELOG.md","en":"https:\/\/github.com\/yaojingang\/GEOFlow\/blob\/main\/docs\/CHANGELOG_en.md"}}}}</script>
+    
+    <script>
+        (function () {
+            const modal = document.getElementById('admin-welcome-modal');
+            const payloadNode = document.getElementById('admin-welcome-payload');
+            if (!modal || !payloadNode) {
+                return;
+            }
+
+            const payload = JSON.parse(payloadNode.textContent || '{}');
+            const copy = payload.copy || {};
+            const state = payload.state || {};
+            const localeCycle = ['zh-CN', 'en'];
+            let locale = 'zh-CN';
+            let dismissedPersisted = !state.shouldAutoOpen;
+
+            const badgeNode = document.getElementById('admin-welcome-badge');
+            const titleNode = document.getElementById('admin-welcome-title');
+            const subtitleNode = document.getElementById('admin-welcome-subtitle');
+            const contentNode = document.getElementById('admin-welcome-content');
+            const linksLabelNode = document.getElementById('admin-welcome-links-label');
+            const linkXNode = document.getElementById('admin-welcome-link-x');
+            const linkGithubNode = document.getElementById('admin-welcome-link-github');
+            const linkChangelogNode = document.getElementById('admin-welcome-link-changelog');
+            const switchButton = modal.querySelector('[data-welcome-switch]');
+            const closeButtons = modal.querySelectorAll('[data-welcome-close]');
+            const dialog = modal.querySelector('[data-welcome-dialog]');
+            const backdrop = modal.querySelector('[data-welcome-backdrop]');
+            let opener = null;
+
+            function blockNode(block) {
+                if (!block || !block.type) {
+                    return null;
+                }
+
+                if (block.type === 'heading') {
+                    const heading = document.createElement('h3');
+                    heading.className = 'admin-welcome-section-title';
+                    heading.textContent = block.content || '';
+                    return heading;
+                }
+
+                if (block.type === 'list') {
+                    const items = Array.isArray(block.items) ? block.items : [];
+                    const list = document.createElement('ul');
+                    list.className = 'admin-welcome-list';
+                    items.forEach((item) => {
+                        const listItem = document.createElement('li');
+                        const bullet = document.createElement('span');
+                        const text = document.createElement('span');
+                        listItem.className = 'admin-welcome-list-item';
+                        bullet.className = 'admin-welcome-bullet';
+                        text.textContent = item;
+                        listItem.append(bullet, text);
+                        list.append(listItem);
+                    });
+                    return list;
+                }
+
+                const paragraph = document.createElement('p');
+                paragraph.className = 'admin-welcome-paragraph';
+                paragraph.textContent = block.content || '';
+                return paragraph;
+            }
+
+            function render(nextLocale) {
+                locale = localeCycle.includes(nextLocale) ? nextLocale : 'zh-CN';
+                const localeCopy = copy[locale] || copy['zh-CN'] || {};
+                const meta = localeCopy.meta || {};
+                const letter = localeCopy.letter || {};
+                const blocks = letter.blocks || [];
+
+                badgeNode.textContent = meta.badge || '';
+                titleNode.textContent = letter.title || '';
+                subtitleNode.textContent = letter.subtitle || '';
+                contentNode.replaceChildren(...blocks.map((block) => blockNode(block)).filter(Boolean));
+                linksLabelNode.textContent = meta.links_label || '';
+                linkXNode.textContent = meta.author_link || '';
+                linkXNode.href = state.links?.x || '#';
+                linkGithubNode.textContent = meta.github_link || '';
+                linkGithubNode.href = state.links?.github || '#';
+                linkChangelogNode.textContent = meta.changelog_link || '';
+                linkChangelogNode.href = state.links?.changelog?.[locale] || state.links?.changelog?.['zh-CN'] || '#';
+                switchButton.textContent = meta.switch_label || (locale === 'zh-CN' ? 'English' : '中文');
+                closeButtons.forEach((button) => {
+                    button.textContent = meta.close || 'Close';
+                });
+            }
+
+            function openModal(nextOpener = document.activeElement) {
+                opener = nextOpener;
+                render('zh-CN');
+                modal.classList.remove('hidden');
+                document.body.classList.add('overflow-hidden');
+                window.requestAnimationFrame(() => switchButton?.focus({ preventScroll: true }));
+            }
+
+            async function persistDismissIfNeeded() {
+                if (dismissedPersisted || !state.dismissUrl || !state.csrfToken) {
+                    return;
+                }
+
+                try {
+                    const response = await fetch(state.dismissUrl, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+                            'X-Requested-With': 'XMLHttpRequest',
+                            'Accept': 'application/json',
+                        },
+                        body: new URLSearchParams({
+                            _token: state.csrfToken,
+                        }),
+                    });
+
+                    if (response.ok) {
+                        dismissedPersisted = true;
+                    }
+                } catch (error) {
+                    console.error('Failed to persist welcome dismissal', error);
+                }
+            }
+
+            async function closeModal() {
+                modal.classList.add('hidden');
+                document.body.classList.remove('overflow-hidden');
+                opener?.focus?.({ preventScroll: true });
+                opener = null;
+                await persistDismissIfNeeded();
+            }
+
+            switchButton.addEventListener('click', function () {
+                render(locale === 'zh-CN' ? 'en' : 'zh-CN');
+            });
+
+            closeButtons.forEach((button) => {
+                button.addEventListener('click', closeModal);
+            });
+
+            backdrop?.addEventListener('click', closeModal);
+            dialog?.addEventListener('keydown', function (event) {
+                if (event.key === 'Escape') {
+                    event.preventDefault();
+                    void closeModal();
+                    return;
+                }
+                if (event.key !== 'Tab') return;
+                const focusable = Array.from(dialog.querySelectorAll('a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])'));
+                if (focusable.length === 0) return;
+                const first = focusable[0];
+                const last = focusable[focusable.length - 1];
+                if (event.shiftKey && document.activeElement === first) {
+                    event.preventDefault();
+                    last.focus();
+                } else if (!event.shiftKey && document.activeElement === last) {
+                    event.preventDefault();
+                    first.focus();
+                }
+            });
+
+            document.querySelectorAll('[data-open-admin-welcome]').forEach((trigger) => {
+                trigger.addEventListener('click', function (event) {
+                    event.preventDefault();
+                    openModal(trigger);
+                });
+            });
+
+            if (state.shouldAutoOpen) {
+                openModal();
+            }
+        })();
+    </script>
+    
+                    </body>
+</html>

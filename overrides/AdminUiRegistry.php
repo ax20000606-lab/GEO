@@ -72,6 +72,20 @@ final class AdminUiRegistry
                 'recent_tone' => 'green',
             ],
             [
+                // 【本地扩展】标题反推提问：输入标题 → 推导「能抢哪些 AI 提问」
+                //
+                // 为什么放在「内容资产」组、且排在内容工坊前面：
+                // 功能链路是 反推提问 → 内容工坊 → 任务管理。先知道要抢哪些问题，
+                // 才知道该写什么，才生成任务。挂在最前面，顺序本身就是流程说明。
+                //
+                // label_key 直接写中文而不是 admin.nav.xxx：
+                // 语言包文件没挂进容器，缺失的 key 会被 __() 原样返回，
+                // 导航上就会显示 "admin.nav.geo_title_question"。写中文则原样显示正确文案。
+                'key' => 'geo_title_question', 'group' => 'content', 'label_key' => '标题反推提问',
+                'icon' => 'target', 'route' => 'admin.title-question', 'protected' => false,
+                'patterns' => ['admin.title-question', 'admin.title-question.*'], 'recent_tone' => 'blue',
+            ],
+            [
                 'key' => 'articles', 'group' => 'content', 'label_key' => 'admin.nav.articles',
                 'icon' => 'file-text', 'route' => 'admin.articles.index', 'protected' => false,
                 'patterns' => ['admin.articles.*', 'admin.manual-publications.*'], 'recent_tone' => 'violet',

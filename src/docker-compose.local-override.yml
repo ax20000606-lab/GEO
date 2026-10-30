@@ -70,6 +70,28 @@ x-geo-volumes: &geo-volumes
   #    逻辑改动，说明这份 override 已漂移，必须重新对齐后再上线。
   - D:\GEOFlow\overrides\ArticleAiQualityWorkerLiveness.php:/var/www/html/app/Services/GeoFlow/ArticleAiQualityWorkerLiveness.php:ro
 
+  # ===== 【标题反推提问 T01 · 数据层】=====
+  # 这两张表（geo_title_prompt_batches / geo_title_prompt_questions）不挂 migrations
+  # 目录，靠 GeoTitleQuestionStore::ensureSchema() 在页面/接口入口懒建表。
+  # .sql 挂进 database/ 只是让「表结构长什么样」能在容器里直接看到，
+  # 不参与运行（真正执行的是 PHP 里的 DDL，两边必须同步改）。
+  - D:\GEOFlow\overrides\GeoTitleQuestionStore.php:/var/www/html/app/Support/GeoAudit/GeoTitleQuestionStore.php:ro
+  - D:\GEOFlow\overrides\geo-title-prompt-schema.sql:/var/www/html/database/geo-title-prompt-schema.sql:ro
+
+  # ===== 【标题反推提问 T02 · 规则内核】=====
+  # 15 格注册表 + 词表 / 槽位解析 / 复算与判定 / 自测。
+  # ⚠️ 只挂这 4 个，不预先挂 T03/T04 的文件 —— 源文件不存在时 docker 会把
+  #    挂载点建成空目录，Laravel 一 require 就 500。
+  - D:\GEOFlow\overrides\GeoTitleQuestionIndustry.php:/var/www/html/app/Support/GeoAudit/GeoTitleQuestionIndustry.php:ro
+  - D:\GEOFlow\overrides\GeoTitleQuestionSlots.php:/var/www/html/app/Support/GeoAudit/GeoTitleQuestionSlots.php:ro
+  - D:\GEOFlow\overrides\GeoTitleQuestionRules.php:/var/www/html/app/Support/GeoAudit/GeoTitleQuestionRules.php:ro
+  - D:\GEOFlow\overrides\GeoTitleQuestionSelftest.php:/var/www/html/app/Support/GeoAudit/GeoTitleQuestionSelftest.php:ro
+  # T04 页面骨架（报告页 + 表单页）。路由已在 web.php 接好。
+  - D:\GEOFlow\overrides\GeoTitleQuestionReport.php:/var/www/html/app/Support/GeoAudit/GeoTitleQuestionReport.php:ro
+  # T03 生成器：Prompt 构建 + 编排。**这是本功能唯一会真调 LLM 的地方**
+  - D:\GEOFlow\overrides\GeoTitleQuestionPrompt.php:/var/www/html/app/Support/GeoAudit/GeoTitleQuestionPrompt.php:ro
+  - D:\GEOFlow\overrides\GeoTitleQuestionGenerator.php:/var/www/html/app/Support/GeoAudit/GeoTitleQuestionGenerator.php:ro
+
 x-deepseek-dns-pin: &deepseek-dns-pin
   extra_hosts:
     - "api.deepseek.com:119.188.175.46"

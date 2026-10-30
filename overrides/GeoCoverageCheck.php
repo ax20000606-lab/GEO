@@ -30,8 +30,16 @@ use Illuminate\Support\Facades\DB;
  */
 final class GeoCoverageCheck
 {
-    /** 单次核查最多题数 */
-    public const MAX_QUESTIONS = 20;
+    /**
+     * normalizeQuestions() 的硬顶（防止一条请求里塞进几万行把内存撑爆）。
+     *
+     * 【本地修复】原来是 20，和表单页的「本次核查题数 6/12/20」绑在一起：
+     * 79 个词的词库永远只能跑 20 题。题数下拉删除后，业务上限改由
+     * routes/web.php 的 COVERAGE_MAX_QUESTIONS（500）把关 —— 超了是**报错**，
+     * 不是截断。这里只是防内存的硬顶，不参与任何业务判断，所以放到远高于 500。
+     * 方法体一行未改：仍然是"去空白 → 去重复 → 砍到 120 字 → 撞硬顶停"。
+     */
+    public const MAX_QUESTIONS = 2000;
 
     /** 报告分块统计认的四个类别，与 keywords.category 对齐 */
     public const CATEGORIES = ['A', 'B', 'C', 'D'];
@@ -154,6 +162,11 @@ final class GeoCoverageCheck
             'hit_competitors' => [],
             'sources_count' => 0,
             'run_id' => 0,
+            // 【本地修复】这一次 probe 实际落库的全部 run id（含失败重试产生的）。
+            // 原来只回传最后一个 run_id，调用方没法把整批采样挂到「核查批次」上，
+            // 历史报告就只能按"品牌全部历史"统计，分不出这一批是哪几题。
+            // 判定逻辑一行未动，这里只是把已经落库的 id 一并带出去。
+            'run_ids' => [],
             'elapsed_ms' => 0,
             'error' => '',
             // 重复采样专项字段
@@ -175,6 +188,10 @@ final class GeoCoverageCheck
         $collectRounds = [];
         $errors = [];
         $lastRunId = 0;
+        // 每次尝试（成功或失败）都会在 ai_visibility_runs 落一条，
+        // 这里全部记下来，交给调用方写 ai_visibility_batch_runs。
+        /** @var list<int> $runIds */
+        $runIds = [];
 
         // 允许额外重试：目标是凑满 $rounds 次"有效采样"。
         // 上游搜索偶发失败（ai_provider_request_failed）很常见，
@@ -205,6 +222,9 @@ final class GeoCoverageCheck
                 }
 
                 $lastRunId = (int) $run->getKey();
+                if ($lastRunId > 0 && ! in_array($lastRunId, $runIds, true)) {
+                    $runIds[] = $lastRunId;
+                }
                 $sources = $run->sources()->orderByRaw('COALESCE(rank, 999999) asc')->orderBy('id')->get();
 
                 if ($sources->isEmpty()) {
@@ -230,6 +250,7 @@ final class GeoCoverageCheck
             return array_merge($base, [
                 'error' => $errors !== [] ? implode('；', array_slice($errors, 0, 2)) : '搜索全部失败',
                 'errors' => $errors,
+                'run_ids' => $runIds,
                 'elapsed_ms' => (int) round((microtime(true) - $started) * 1000),
             ]);
         }
@@ -238,6 +259,7 @@ final class GeoCoverageCheck
 
         return array_merge($base, $agg, [
             'run_id' => $lastRunId,
+            'run_ids' => $runIds,
             'errors' => $errors,
             'elapsed_ms' => (int) round((microtime(true) - $started) * 1000),
         ]);
@@ -494,12 +516,14 @@ final class GeoCoverageCheck
      *
      * @param  list<string>  $ownDomains  兜底的自有域名关键词（品牌档案没有 site_url 时用）
      * @param  string|null  $brandSlug  品牌 slug；null = 按 ?brand= → cookie → default 解析
+     * @param  list<int>|null  $runIds  只看这几条 run（历史报告按批次过滤）；
+     *                                  null = 该品牌全部历史，[] = 这批还没有采样（统计全 0）
      * @return array{categories:array<string,array<string,mixed>>,own_sites:list<string>,
      *               brand:array{slug:string,name:string,site_url:string},
      *               brands:list<array{slug:string,name:string}>,
      *               all_questions:array<string,int>}
      */
-    public static function categoryBreakdown(array $ownDomains = [], ?string $brandSlug = null): array
+    public static function categoryBreakdown(array $ownDomains = [], ?string $brandSlug = null, ?array $runIds = null): array
     {
         $fallbackNeedles = [];
         foreach ($ownDomains as $d) {
@@ -531,6 +555,8 @@ final class GeoCoverageCheck
             ->join('keywords as k', 'k.keyword', '=', 'r.keyword')
             ->leftJoin('ai_visibility_sources as s', 's.ai_visibility_run_id', '=', 'r.id')
             ->whereIn('k.category', self::CATEGORIES)
+            // 历史报告按批次看时只统计这一批的采样；null = 该品牌全部历史（原行为）
+            ->when($runIds !== null, static fn ($q) => $q->whereIn('r.id', $runIds))
             ->orderBy('r.id')
             ->orderByRaw('COALESCE(s.rank, 999999) asc')
             ->orderBy('s.id')
@@ -792,10 +818,12 @@ final class GeoCoverageCheck
      *
      * @param  list<string>  $ownDomains  兜底的自有域名关键词（品牌档案没有 site_url 时用）
      * @param  string|null  $brandSlug  品牌 slug；null = 按 ?brand= → cookie → default 解析
+     * @param  list<int>|null  $runIds  只看这几条 run（历史报告按批次过滤）；
+     *                                  null = 该品牌全部历史，[] = 这批还没有采样
      * @return list<array{run_id:int,question:string,own_rank:int|null,
      *                    top1_domain:string,top1_site:string,top1_title:string}>
      */
-    public static function authorityGapSamples(array $ownDomains = [], ?string $brandSlug = null): array
+    public static function authorityGapSamples(array $ownDomains = [], ?string $brandSlug = null, ?array $runIds = null): array
     {
         $fallbackNeedles = [];
         foreach ($ownDomains as $d) {
@@ -831,6 +859,8 @@ final class GeoCoverageCheck
             ->leftJoin('ai_visibility_sources as s', 's.ai_visibility_run_id', '=', 'r.id')
             ->where('k.category', 'A')
             ->whereIn('k.library_id', array_keys($libAllowed))
+            // 历史报告按批次看时只统计这一批的采样；null = 该品牌全部历史（原行为）
+            ->when($runIds !== null, static fn ($q) => $q->whereIn('r.id', $runIds))
             ->orderBy('r.id')
             ->orderByRaw('COALESCE(s.rank, 999999) asc')
             ->orderBy('s.id')
@@ -915,6 +945,404 @@ final class GeoCoverageCheck
         }
 
         return $out;
+    }
+
+    // =========================================================================
+    // 核查批次（历史报告）：把「这一次核查」从 session 里解放出来
+    // =========================================================================
+
+    /**
+     * 核查开始时建批次记录，返回批次 id（失败返回 0）。
+     *
+     * ── 为什么要存这些快照 ────────────────────────────────────────────
+     * 历史报告如果跟着品牌档案变，等于篡改历史：
+     *   · site_url 改了 → 当时判成"自有页面"的采样会变成"仅被提及"；
+     *   · 题数 / 采样次数不存 → 页面上写不出"这批到底跑了几题几次"；
+     *   · has_site 不存 → 以后做无官网口径时，回看旧报告分不清当时按哪套算的。
+     * 所以这四样都在核查那一刻抄一份进批次表。
+     *
+     * 建批次失败不能影响核查本身（表没建 / 事务冲突）：返回 0，
+     * 后续 attachRuns()/finalizeBatch() 收到 0 直接跳过，核查照跑，只是没留档。
+     *
+     * @param  array<string,mixed>  $ctx  核查上下文（brands / url / rounds / competitors）
+     * @param  int  $questionsCount  本次计划跑多少题
+     */
+    public static function createBatch(array $ctx, int $questionsCount): int
+    {
+        try {
+            $brandSlug = GeoCoverageReport::coverageBrandSlug($ctx);
+            $first = trim((string) (($ctx['brands'] ?? [])[0] ?? ''));
+            if ($first === '') {
+                $first = trim((string) ($ctx['brand'] ?? ''));
+            }
+            $brandName = '';
+            foreach (GeoShareOfVoice::brands() as $brand) {
+                if (trim((string) ($brand['slug'] ?? '')) !== $brandSlug || $brandSlug === '') {
+                    continue;
+                }
+                $brandName = trim((string) ($brand['name'] ?? ''));
+                break;
+            }
+            if ($brandName === '') {
+                $brandName = $first;
+            }
+
+            $siteUrl = trim((string) ($ctx['url'] ?? ''));
+            // has_site：核查那一刻品牌档案里有没有官网。
+            // 这一批先恒为 true（无官网口径下一批做），但字段必须写进去 ——
+            // 否则以后回看旧报告分不清"当时按无官网口径跑的"和"压根没记录"。
+            $hasSite = true;
+
+            $admin = auth('admin')->user();
+            $now = date('Y-m-d H:i:s');
+
+            return (int) DB::table('ai_visibility_batches')->insertGetId([
+                'brand_slug' => $brandSlug !== '' ? mb_substr($brandSlug, 0, 64, 'UTF-8') : 'unknown',
+                'brand_name' => $brandName !== '' ? mb_substr($brandName, 0, 128, 'UTF-8') : null,
+                'site_url' => $siteUrl !== '' ? mb_substr($siteUrl, 0, 255, 'UTF-8') : null,
+                'has_site' => $hasSite,
+                'questions_count' => max(0, $questionsCount),
+                'rounds' => max(1, (int) ($ctx['rounds'] ?? 1)),
+                'runs_count' => 0,
+                'valid_count' => 0,
+                'status' => 'running',
+                'source' => 'coverage_check',
+                'created_by' => $admin !== null ? (int) $admin->getKey() : null,
+                'created_at' => $now,
+                'updated_at' => $now,
+            ]);
+        } catch (\Throwable $e) {
+            return 0;
+        }
+    }
+
+    /**
+     * 把这一题产生的 run 挂到批次上（每跑完一题调用一次）。
+     *
+     * 用 insertOrIgnore 而不是 insert：同一批可能被重复提交（用户刷新页面重试某一题），
+     * 主键冲突不该让整个 AJAX 请求 500，静默去重即可。
+     *
+     * @param  list<int>  $runIds
+     * @return int 实际尝试写入的行数（0 = 跳过了）
+     */
+    public static function attachRuns(int $batchId, array $runIds): int
+    {
+        if ($batchId <= 0 || $runIds === []) {
+            return 0;
+        }
+
+        $rows = [];
+        foreach (array_unique(array_map('intval', $runIds)) as $runId) {
+            if ($runId > 0) {
+                $rows[] = ['batch_id' => $batchId, 'run_id' => $runId];
+            }
+        }
+        if ($rows === []) {
+            return 0;
+        }
+
+        try {
+            DB::table('ai_visibility_batch_runs')->insertOrIgnore($rows);
+        } catch (\Throwable $e) {
+            return 0;
+        }
+
+        return count($rows);
+    }
+
+    /**
+     * 同步批次的计数与状态。
+     *
+     * runs_count  = 关联表里这一批的 run 数（含失败重试产生的）
+     * valid_count = 其中至少拿到 1 条信源的 run 数
+     *
+     * 每跑完一题都会调一次（status 仍是 running），全部跑完再调一次（completed）。
+     * 这样即使用户中途关掉页面，下拉里也能看到"跑到第几题、多少条有效"。
+     *
+     * @param  string  $status  running / completed / aborted
+     */
+    public static function syncBatch(int $batchId, string $status = 'running'): void
+    {
+        if ($batchId <= 0) {
+            return;
+        }
+
+        try {
+            $runs = (int) DB::table('ai_visibility_batch_runs')->where('batch_id', $batchId)->count();
+            $valid = (int) DB::table('ai_visibility_batch_runs as br')
+                ->join('ai_visibility_sources as s', 's.ai_visibility_run_id', '=', 'br.run_id')
+                ->where('br.batch_id', $batchId)
+                ->distinct()
+                ->count('br.run_id');
+
+            DB::table('ai_visibility_batches')->where('id', $batchId)->update([
+                'runs_count' => $runs,
+                'valid_count' => $valid,
+                'status' => in_array($status, ['running', 'completed', 'aborted'], true) ? $status : 'running',
+                'updated_at' => date('Y-m-d H:i:s'),
+            ]);
+        } catch (\Throwable $e) {
+            // 计数是"锦上添花"，不能因为它把核查结果本身弄丢
+        }
+    }
+
+    /**
+     * 一条批次记录还原成「核查上下文」。
+     *
+     * 会话过期后报告页仍然要能渲染，而渲染需要 ctx（品牌 / 站点 / 域名关键词 / 采样次数）。
+     * 这些值在批次表里都有快照，直接拼回来即可 —— 注意品牌和站点取的是
+     * <b>核查那一刻</b>的值，不是现在的品牌档案，否则历史报告会跟着档案变。
+     *
+     * @return array{brand:string,brands:list<string>,url:string,domains:list<string>,
+     *               rounds:int,competitors:list<string>,batch_id:int}|null
+     *         null = 批次不存在
+     */
+    public static function batchContext(int $batchId): ?array
+    {
+        if ($batchId <= 0) {
+            return null;
+        }
+
+        $batch = DB::table('ai_visibility_batches')->where('id', $batchId)->first();
+        if ($batch === null) {
+            return null;
+        }
+
+        $brandName = trim((string) ($batch->brand_name ?? ''));
+        $siteUrl = trim((string) ($batch->site_url ?? ''));
+        $domains = (array) (self::domainOf($siteUrl)['keys'] ?? []);
+
+        // 品牌名只用来标注"这次核查跑的是谁"，统计口径仍由 ?brand= 决定。
+        $display = $brandName !== '' ? $brandName : trim((string) ($batch->brand_slug ?? ''));
+
+        return [
+            'brand' => $display,
+            'brands' => $display !== '' ? [$display] : [],
+            'url' => $siteUrl,
+            'domains' => array_values($domains),
+            'rounds' => max(1, (int) ($batch->rounds ?? 1)),
+            'competitors' => [],
+            'batch_id' => (int) $batch->id,
+        ];
+    }
+
+    /**
+     * 批次 → 它包含了哪些 run（升序）。
+     *
+     * 报告页按批次统计时用这个列表去过滤 categoryBreakdown() / authorityGapSamples()。
+     *
+     * @return list<int>
+     */
+    public static function batchRunIds(int $batchId): array
+    {
+        if ($batchId <= 0) {
+            return [];
+        }
+
+        $ids = DB::table('ai_visibility_batch_runs')
+            ->where('batch_id', $batchId)
+            ->orderBy('run_id')
+            ->pluck('run_id')
+            ->all();
+
+        $out = [];
+        foreach ($ids as $id) {
+            $id = (int) $id;
+            if ($id > 0) {
+                $out[] = $id;
+            }
+        }
+
+        return $out;
+    }
+
+    /**
+     * 批次 → 逐题结果（会话过期后重建报告用）。
+     *
+     * ── 为什么不重跑一遍判定以外的任何东西 ────────────────────────────
+     * 采样已经在 ai_visibility_runs / ai_visibility_sources 里，
+     * 判定又是纯字符串规则（judge()），所以"重建"= 把当时的信源重新判一次，
+     * 结果与当时页面上的完全一致，不需要也不允许重新调搜索。
+     *
+     * ── 多轮采样怎么合 ────────────────────────────────────────────────
+     * 与 probe() 完全同一套：judge() 逐轮判 → aggregate() 多数决压成一行。
+     * 这样"历史报告"和"当时看到的报告"对同一道题给出同一个结论。
+     *
+     * 没有信源的 run（被限流 / 搜索无结果）不参与多数决，全部轮次都空时
+     * 该题标成失败 —— 与 probe() 的处理一致，不能拿网络故障当内容缺口。
+     *
+     * @return list<array<string,mixed>> 形状与 probe() 的返回一致，可直接喂 reportPage()
+     */
+    public static function resultsForBatch(int $batchId): array
+    {
+        if ($batchId <= 0) {
+            return [];
+        }
+
+        $ctx = self::batchContext($batchId);
+        if ($ctx === null) {
+            return [];
+        }
+
+        $runRows = DB::table('ai_visibility_batch_runs as br')
+            ->join('ai_visibility_runs as r', 'r.id', '=', 'br.run_id')
+            ->where('br.batch_id', $batchId)
+            ->orderBy('r.id')
+            ->get(['r.id as run_id', 'r.keyword as keyword']);
+
+        if ($runRows->isEmpty()) {
+            return [];
+        }
+
+        $brands = self::batchBrandNames($batchId, (string) $ctx['brand']);
+        $domains = (array) $ctx['domains'];
+        $competitors = self::batchCompetitors($batchId);
+
+        /** @var array<string,list<int>> $byQuestion 题面 => 该题的 run id 列表（按落库顺序） */
+        $byQuestion = [];
+        foreach ($runRows as $row) {
+            $keyword = trim((string) ($row->keyword ?? ''));
+            if ($keyword === '') {
+                continue;
+            }
+            $byQuestion[$keyword][] = (int) $row->run_id;
+        }
+
+        $self = new self();
+        $out = [];
+        foreach ($byQuestion as $question => $runIds) {
+            $judged = [];
+            $lastError = '';
+            foreach ($runIds as $runId) {
+                $sources = DB::table('ai_visibility_sources')
+                    ->where('ai_visibility_run_id', $runId)
+                    ->orderByRaw('COALESCE(rank, 999999) asc')
+                    ->orderBy('id')
+                    ->get(['rank', 'url', 'domain', 'site_name', 'title']);
+
+                if ($sources->isEmpty()) {
+                    $lastError = '本批这次采样没有拿到有效信源（可能被限流），当次判定结果已不可得';
+                    continue;
+                }
+
+                $judged[] = $self->judge($sources, $brands, $domains, $competitors);
+            }
+
+            if ($judged === []) {
+                $out[] = [
+                    'question' => $question,
+                    'covered' => false,
+                    'covered_type' => '',
+                    'best_rank' => null,
+                    'error' => $lastError !== '' ? $lastError : '本批没有可用的采样结果',
+                    'run_ids' => $runIds,
+                ];
+                continue;
+            }
+
+            $agg = $self->aggregate($judged, count($runIds));
+
+            $out[] = array_merge(['question' => $question], $agg, [
+                'run_id' => (int) end($runIds),
+                'run_ids' => $runIds,
+                'error' => '',
+                'elapsed_ms' => 0,
+            ]);
+        }
+
+        return $out;
+    }
+
+    /**
+     * 批次所属品牌的全部匹配名（小写无关，judge() 内部会归一）。
+     *
+     * 优先用品牌档案的 aliases（与当时核查时 judge() 拿到的列表基本一致），
+     * 档案里认不出这个 slug 时退回批次快照的品牌名 —— 至少"品牌名出现"这一档还能判。
+     *
+     * @return list<string>
+     */
+    private static function batchBrandNames(int $batchId, string $fallbackName): array
+    {
+        $batch = DB::table('ai_visibility_batches')->where('id', $batchId)->first();
+        $slug = $batch !== null ? trim((string) ($batch->brand_slug ?? '')) : '';
+        $name = $batch !== null ? trim((string) ($batch->brand_name ?? '')) : '';
+
+        $out = [];
+        foreach (GeoShareOfVoice::brands() as $brand) {
+            $brandSlug = trim((string) ($brand['slug'] ?? ''));
+            // 不能用 GeoShareOfVoice::brand()：它认不出 slug 时会静默回退到第一个品牌，
+            // 拿别家的别名去判这一批的题，会把"被提及"算错。
+            if ($slug === '' || $brandSlug !== $slug) {
+                continue;
+            }
+            foreach ((array) ($brand['aliases'] ?? []) as $a) {
+                $a = trim((string) $a);
+                if ($a !== '') {
+                    $out[] = $a;
+                }
+            }
+            foreach ([(string) ($brand['name'] ?? ''), (string) ($brand['full_name'] ?? '')] as $n) {
+                $n = trim($n);
+                if ($n !== '') {
+                    $out[] = $n;
+                }
+            }
+            break;
+        }
+
+        foreach ([$name, $fallbackName] as $n) {
+            $n = trim($n);
+            if ($n !== '') {
+                $out[] = $n;
+            }
+        }
+
+        return array_values(array_unique($out));
+    }
+
+    /**
+     * 批次所属品牌的竞品别名（只影响逐题的"竞品: 谁(第几)"标注，不参与覆盖判定）。
+     *
+     * @return list<string>
+     */
+    private static function batchCompetitors(int $batchId): array
+    {
+        $batch = DB::table('ai_visibility_batches')->where('id', $batchId)->first();
+        $slug = $batch !== null ? trim((string) ($batch->brand_slug ?? '')) : '';
+        if ($slug === '') {
+            return [];
+        }
+
+        $out = [];
+        foreach (GeoShareOfVoice::brands() as $brand) {
+            if (trim((string) ($brand['slug'] ?? '')) !== $slug) {
+                continue;
+            }
+            foreach ((array) ($brand['competitors'] ?? []) as $c) {
+                if (! is_array($c)) {
+                    continue;
+                }
+                $aliases = [];
+                foreach ((array) ($c['aliases'] ?? []) as $a) {
+                    $a = trim((string) $a);
+                    if ($a !== '') {
+                        $aliases[] = $a;
+                    }
+                }
+                if ($aliases === []) {
+                    $n = trim((string) ($c['name'] ?? ''));
+                    if ($n !== '') {
+                        $aliases[] = $n;
+                    }
+                }
+                foreach ($aliases as $a) {
+                    $out[$a] = true;
+                }
+            }
+            break;
+        }
+
+        return array_keys($out);
     }
 
     /**
